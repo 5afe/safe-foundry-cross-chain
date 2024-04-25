@@ -12,3 +12,7 @@ yarn install
 npx hardhat compile
 REPORT_GAS=true npx hardhat test
 ```
+
+## TODO
+- [ ] Include `l1sload` when ready
+- [ ] Support EIP-712 signature

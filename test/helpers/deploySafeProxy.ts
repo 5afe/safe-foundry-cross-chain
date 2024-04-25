@@ -7,9 +7,10 @@ export default async function deploySafeProxy(
   factory: string,
   mastercopy: string,
   owners: string[],
+  threshold: number,
   deployer: SignerWithAddress,
 ): Promise<string> {
-  const initializer = calculateInitializer(owners)
+  const initializer = calculateInitializer(owners, threshold)
 
   const iface = new Interface(ArtifactSafeProxyFactory.abi)
   await deployer.sendTransaction({
@@ -20,12 +21,12 @@ export default async function deploySafeProxy(
   return calculateProxyAddress(initializer, factory, mastercopy)
 }
 
-function calculateInitializer(owners: string[]): string {
+function calculateInitializer(owners: string[], threshold: number): string {
   const iface = new Interface(ArtifactSafe.abi)
 
   const initializer = iface.encodeFunctionData('setup', [
-    owners, // owners
-    1, // threshold
+    owners,
+    threshold, 
     ZeroAddress, // to - for setupModules
     '0x', // data - for setupModules
     ZeroAddress, // fallbackHandler

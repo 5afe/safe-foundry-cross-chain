@@ -31,6 +31,9 @@ interface ISafe {
  */
 contract SafeKeystoreModule {
 
+    // Safe -> ModuleNonce
+    mapping(address => uint16) public nonces;
+
     error ExecutionFailed();
 
     function executeTransaction(
@@ -46,25 +49,14 @@ contract SafeKeystoreModule {
         // Read keystore state on L1
         // Use l1sload
 
-        // Validate signatures against L1 keystore
-        bytes32 txHash;
+        // Calculate the message hash 
+        // @note: We shouldn't use txhash because it could be use to replay 
+        bytes32 msgHash;
         {
-            txHash = safe.getTransactionHash( // Transaction info
-                to,
-                value,
-                data,
-                operation,
-                0, //safeTxGas,
-                // Payment info
-                0, //baseGas,
-                0, //gasPrice,
-                address(0), //gasToken,
-                address(0), //refundReceiver,
-                // Signature info
-                // We use the post-increment here, so the current nonce value is used and incremented afterwards.
-                safe.nonce() + 1
-            );
-            safe.checkSignatures(txHash, signatures);
+            // msgHash = keccak256(encodeTransactionData(to, value, data, operation, module_nonce)
+            msgHash = keccak256(abi.encodePacked(to, value, data, operation, nonces[msg.sender]));
+            // Validate the message against the signature and the owners of keystoreSafe
+            safe.checkSignatures(msgHash, signatures);
         }
 
 
@@ -72,6 +64,9 @@ contract SafeKeystoreModule {
         if (!safe.execTransactionFromModule({to: address(safe), value: 0, data: data, operation: Enum.Operation.Call})) {
             revert ExecutionFailed();
         }
+
+        // Increment nonce on successful execution
+        nonces[msg.sender]++;
     }
 
 }
