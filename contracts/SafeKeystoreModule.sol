@@ -25,13 +25,13 @@ interface ISafe {
 
 /**
  * @title SafeKeystoreModule - An extension to the Safe contract that derive its security policy from a Safe on another network 
- * @dev TBC
+ * @dev TBD
  * 
  * @author Greg Jeanmart - @gjeanmart
  */
 contract SafeKeystoreModule {
 
-    // Safe -> ModuleNonce
+    // Safe -> Module Nonce
     mapping(address => uint16) public nonces;
 
     error ExecutionFailed();
@@ -47,15 +47,16 @@ contract SafeKeystoreModule {
         ISafe safe = ISafe(msg.sender);
 
         // Read keystore state on L1
-        // Use l1sload
+        // @TODO: Use l1sload to load owners
+        ISafe safeL1 = ISafe(keystoreSafe);
+        address[] memory ownersL1 = safeL1.getOwners();
 
-        // Calculate the message hash 
-        // @note: We shouldn't use txhash because it could be use to replay 
         bytes32 msgHash;
         {
-            // msgHash = keccak256(encodeTransactionData(to, value, data, operation, module_nonce)
+            // Calculate the message hash 
             msgHash = keccak256(abi.encodePacked(to, value, data, operation, nonces[msg.sender]));
-            // Validate the message against the signature and the owners of keystoreSafe
+            // @TODO: Validate the message against the signature and the owners of keystoreSafe `ownersL1`
+            // @TODO: Use custom checkSignatures method
             safe.checkSignatures(msgHash, signatures);
         }
 
@@ -65,7 +66,7 @@ contract SafeKeystoreModule {
             revert ExecutionFailed();
         }
 
-        // Increment nonce on successful execution
+        // Increment nonce after successful execution
         nonces[msg.sender]++;
     }
 
