@@ -1,7 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { expect } from 'chai'
-import { parseUnits, ZeroAddress, formatEther, JsonRpcProvider, parseEther } from 'ethers'
-import hre from 'hardhat'
+import { parseUnits, formatEther, JsonRpcProvider, parseEther } from 'ethers'
 
 import execKeystoreTransaction from './helpers/execKeystoreTransaction'
 import execSafeTransaction from './helpers/execSafeTransaction'
@@ -20,49 +19,40 @@ describe('KeystoreModule', () => {
         const { provider, safeL1, safeL2, safeKeystoreModule, ownerL1, ownerL2, recipient } = await loadFixture(setup)
 
         const safeL2Address = await safeL2.getAddress()
+        const safeL1Address = await safeL1.getAddress()
         // const tokenAddress = await token.getAddress()
         const keyStoreModuleAddress = await safeKeystoreModule.getAddress()
 
-        // Check Safes configuration
+        // Check Safes and module configuration
         expect((await safeL1.getOwners())[0]).to.equal(ownerL1.address)
         expect((await safeL2.getOwners())[0]).to.equal(ownerL2.address)
         expect(await safeL2.isModuleEnabled(keyStoreModuleAddress)).to.equal(true)
-
-        console.log(`-------`)
-        let ownerBalance = await getETHBalance(provider, ownerL2.address)
-        console.log(`ownerBalance=${formatEther(ownerBalance)} ETH`)
-        let safeL2Balance = await getETHBalance(provider, safeL2Address)
-        console.log(`safeBalance=${formatEther(safeL2Balance)} ETH`)
-
+        expect(await safeKeystoreModule.getKeystore(safeL2Address)).to.equal(safeL1Address)
+        expect(await safeKeystoreModule.getNonce(safeL2Address)).to.equal(0)
+        
         // Send some ETH to SafeL2
         await ownerL2.sendTransaction({
             to: safeL2Address,
-            value: parseUnits('1', 18),
+            value: parseEther('1'),
         })
 
-        console.log(`-------`)
-        ownerBalance = await getETHBalance(provider, ownerL2.address)
-        console.log(`ownerBalance=${formatEther(ownerBalance)} ETH`)
-        safeL2Balance = await getETHBalance(provider, safeL2Address)
-        console.log(`safeBalance=${formatEther(safeL2Balance)} ETH`)
-        console.log(`-------`)
-
+        // Execute a transaction through safeKeystoreModule
         const prevRecipientBal = await getETHBalance(provider, recipient.address)
-        console.log(`prevRecipientBal=${formatEther(prevRecipientBal)} ETH`)
         const amountETH = parseEther("0.1")
         await execKeystoreTransaction(safeKeystoreModule, {
-            safeL2: safeL2,
+            safeL2: safeL2Address,
             to: recipient.address,
             amount: amountETH,
-            safeL1: safeL1,
+            safeL1: safeL1Address,
             signerL1: ownerL1
         })
 
         // Check recipient should have received 0.1 ETH
         const newRecipientBal = await getETHBalance(provider, recipient.address)
-        console.log(`newRecipientBal=${formatEther(newRecipientBal)} ETH`)
         expect(newRecipientBal).to.equal(prevRecipientBal + amountETH)
 
+        // Check the nonce has been incremented
+        expect(await safeKeystoreModule.getNonce(safeL2Address)).to.equal(1)
 
     })
 

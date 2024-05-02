@@ -6,6 +6,7 @@ import { SafeKeystoreModule__factory, ISafe__factory } from '../../typechain-typ
 import deploySafeProxy from './deploySafeProxy'
 import deploySingletons from './deploySingletons'
 import execTransaction from './execSafeTransaction'
+import { parseEther } from 'ethers'
 
 export default async function setup() {
   const [ownerL1, ownerL2, deployer, relayer, recipient] = await hre.ethers.getSigners()
@@ -25,11 +26,17 @@ export default async function setup() {
   const safeL2 = ISafe__factory.connect(safeL2Address, relayer)
   const safeKeystoreModule = SafeKeystoreModule__factory.connect(safeKeystoreModuleAddress, relayer)
 
-  // // fund the safe
-  // await token.transfer(safeAddress, 1000)
+  // // fund the safe (1 ETH)
+  await ownerL2.sendTransaction({
+    to: safeL2Address,
+    value: parseEther('1'),
+  })
 
   // enable KeyStoreModule as module on SafeL2
   await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(safeKeystoreModuleAddress), ownerL2)
+
+  // Register SafeL1 as Keystore for SafeL2
+  await execTransaction(safeL2, await safeKeystoreModule.registerKeystore.populateTransaction(safeL1Address), ownerL2)
 
   return {
     //provider
