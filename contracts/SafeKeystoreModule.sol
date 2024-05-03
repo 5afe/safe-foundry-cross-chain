@@ -5,7 +5,8 @@ import "./ISafe.sol";
 import "hardhat/console.sol";
 
 /**
- * @title SafeKeystoreModule - An extension to the Safe contract that derive its security policy from a Safe on another network
+ * @title SafeKeystoreModule
+ * @dev An extension to the Safe contract that derives its security policy from a Safe on another network (L1)
  * @author Greg Jeanmart - @gjeanmart
  */
 contract SafeKeystoreModule {
@@ -44,7 +45,7 @@ contract SafeKeystoreModule {
     }
 
     /**
-     * @dev returns the transaction hash to sign for a given tuple (to, value, data, operation) and nonce
+     * @dev returns the unique tx hash (msg) to sign for a given tuple (to, value, data, operation) and nonce
      * @param safe Address of the Safe
      * @param to To
      * @param value Value
@@ -58,11 +59,9 @@ contract SafeKeystoreModule {
         bytes memory data,
         Enum.Operation operation
     ) public view returns (bytes32) {
-        uint16 nonce = nonces[safe];
-        bytes32 msgHash = keccak256(
-            abi.encodePacked(to, value, data, operation, nonce)
+        return keccak256(
+            abi.encodePacked(to, value, data, operation, nonces[safe])
         );
-        return msgHash;
     }
 
     /**
@@ -70,9 +69,7 @@ contract SafeKeystoreModule {
      * @param keystoreAddress Address of the keystore Safe(L1)
      */
     function registerKeystore(address keystoreAddress) public {
-        if (keystoreAddress == address(0)) {
-            revert InvalidKeystoreAddress();
-        }
+        if (keystoreAddress == address(0)) revert InvalidKeystoreAddress();
         keystores[msg.sender] = keystoreAddress;
     }
 
@@ -94,12 +91,9 @@ contract SafeKeystoreModule {
         bytes memory signatures
     ) public {
         address keystore = keystores[safe];
-        if (keystore == address(0)) {
-            revert NoKeyStoreFound();
-        }
+        if (keystore == address(0)) revert NoKeyStoreFound();
 
-        // Read keystore state on L1
-        // @TODO: Use l1sload to load owners (https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)
+        // Read keystore state
         ISafe safeL1 = ISafe(keystore);
         address[] memory ownersL1;
         ownersL1 = getOwners_sload(safeL1, SENTINEL_OWNERS, ownersL1);
@@ -119,9 +113,7 @@ contract SafeKeystoreModule {
                 data: data,
                 operation: Enum.Operation.Call
             })
-        ) {
-            revert ExecutionFailed();
-        }
+        ) revert ExecutionFailed();
 
         // Increment nonce after successful execution
         nonces[address(safe)]++;
@@ -159,31 +151,29 @@ contract SafeKeystoreModule {
                         dataHash
                     )
                 ),
-                uint8(v), //uint8(v - 4),
+                uint8(v),
                 r,
                 s
             );
 
             bool found = false;
             for (uint256 j = 0; j < owners.length; j++) {
-                if (currentOwner == owners[j]) {
-                    found = true;
-                }
+                if (currentOwner == owners[j]) found = true;
             }
 
-            if (!found) {
-                revert InvalidSignature();
-            }
+            if (!found) revert InvalidSignature();
         }
     }
 
     /**
      * @dev returns a Safe threshold from storage layout
      * @param safe Safe contract
+     *
+     * TODO: Use l1sload to load threshold (https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)
      */
     function getThreshold_sload(ISafe safe) internal view returns (uint256) {
-        bytes memory st = safe.getStorageAt(SAFE_THRESHOLD_SLOT_IDX, 1);
-        return uint256(bytes32(st));
+        bytes memory _storage = safe.getStorageAt(SAFE_THRESHOLD_SLOT_IDX, 1);
+        return uint256(bytes32(_storage));
     }
 
     /**
@@ -191,6 +181,8 @@ contract SafeKeystoreModule {
      * @param safe  Safe contract
      * @param key Mapping key of OwnerManager.owners
      * @param owners Owners's array used a accumulator
+     *
+     * TODO: Use l1sload to load owners (https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)
      */
     function getOwners_sload(
         ISafe safe,

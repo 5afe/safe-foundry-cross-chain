@@ -7,13 +7,11 @@ import execSafeTransaction from './helpers/execSafeTransaction'
 import setup from './helpers/setup'
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider'
 
-const OneEther = parseUnits('1', 'ether')
-
 const getETHBalance = async (provider: JsonRpcProvider | HardhatEthersProvider, accountAddr: string) => {
     return provider.getBalance(accountAddr)
 }
 
-describe('KeystoreModule', () => {
+describe('SafeKeystoreModule', () => {
     it('Execute ETH transfer with delegated configutation from another Safe', async () => {
         const { provider, safeL1, safeL2, safeKeystoreModule, owner1L1, owner2L1, ownerL2, recipient } = await loadFixture(setup)
 
@@ -38,11 +36,11 @@ describe('KeystoreModule', () => {
 
         // Execute a transaction through safeKeystoreModule
         const prevRecipientBal = await getETHBalance(provider, recipient.address)
-        const amountETH = parseEther("0.1")
+        const amount = parseEther("0.1")
         await execKeystoreTransaction(safeKeystoreModule, {
             safeL2: safeL2Address,
             to: recipient.address,
-            value: amountETH,
+            value: amount,
             data: "0x",
             operation: 0, // CALL
             signersL1: [owner1L1, owner2L1]
@@ -50,12 +48,10 @@ describe('KeystoreModule', () => {
 
         // Check recipient should have received 0.1 ETH
         const newRecipientBal = await getETHBalance(provider, recipient.address)
-        expect(newRecipientBal).to.equal(prevRecipientBal + amountETH)
+        expect(newRecipientBal).to.equal(prevRecipientBal + amount)
 
         // Check the nonce has been incremented
         expect(await safeKeystoreModule.getNonce(safeL2Address)).to.equal(1)
-      
-
     })
 
 })
