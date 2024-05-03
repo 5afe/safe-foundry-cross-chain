@@ -100,44 +100,6 @@ contract SafeKeystoreModule {
     }
 
     /**
-     * @dev returns a Safe threshold from storage layout
-     * @param safe Safe contract
-     */
-    function getThreshold_sload(ISafe safe) internal view returns (uint256) {
-        bytes memory st = safe.getStorageAt(SAFE_THRESHOLD_SLOT_IDX, 1);
-        return uint256(bytes32(st));
-    }
-
-    /**
-     * @dev Recursive funcion to get the Safe owners list from storage layout
-     * @param safe  Safe contract
-     * @param key Mapping key of OwnerManager.owners
-     * @param owners Owners's array used a accumulator
-     */
-    function getOwners_sload(
-        ISafe safe,
-        address key,
-        address[] memory owners
-    ) internal view returns (address[] memory) {
-        bytes32 mappingSlot = keccak256(abi.encode(key, SAFE_OWNERS_SLOT_IDX));
-        bytes memory _storage = safe.getStorageAt(uint256(mappingSlot), 1); // 1 => 32 bytes
-        address owner = abi.decode(_storage, (address));
-
-        // End of the linked list
-        if (owner == SENTINEL_OWNERS) {
-            return owners;
-        }
-
-        address[] memory newOwners = new address[](owners.length + 1);
-        for (uint256 i = 0; i < owners.length; i++) {
-            newOwners[i] = owners[i];
-        }
-        newOwners[owners.length] = owner;
-
-        return getOwners_sload(safe, owner, newOwners);
-    }
-
-    /**
      * @dev Execute a transaction through the SafeKeystoreModule verifying signatures against owners/threshold from another Safe
      * @param safe Safe to execute the transaction
      * @param to Recipient of the transaction
@@ -147,14 +109,14 @@ contract SafeKeystoreModule {
      * @param signatures Signatures
      */
     function executeTransaction(
-        ISafe safe,
+        address safe,
         address to,
         uint256 value,
         bytes memory data,
         Enum.Operation operation,
         bytes memory signatures
     ) public {
-        address keystore = keystores[address(safe)];
+        address keystore = keystores[safe];
         if (keystore == address(0)) {
             revert NoKeyStoreFound();
         }
@@ -166,18 +128,21 @@ contract SafeKeystoreModule {
         ownersL1 = getOwners_sload(safeL1, SENTINEL_OWNERS, ownersL1);
         uint256 thresholdL1 = getThreshold_sload(safeL1);
 
+        // Get nonce
+        uint16 nonce = nonces[safe];
+
         bytes32 msgHash;
         {
             // Calculate the message hash
             msgHash = keccak256(
-                abi.encodePacked(to, value, data, operation, nonces[msg.sender])
+                abi.encodePacked(to, value, data, operation, nonce)
             );
             checkSignatures(msgHash, signatures, thresholdL1, ownersL1);
         }
 
         // Execute the transaction
         if (
-            !safe.execTransactionFromModule({
+            !ISafe(safe).execTransactionFromModule({
                 to: to,
                 value: value,
                 data: data,
@@ -239,6 +204,46 @@ contract SafeKeystoreModule {
                 revert InvalidSignature();
             }
         }
+    }
+
+
+
+    /**
+     * @dev returns a Safe threshold from storage layout
+     * @param safe Safe contract
+     */
+    function getThreshold_sload(ISafe safe) internal view returns (uint256) {
+        bytes memory st = safe.getStorageAt(SAFE_THRESHOLD_SLOT_IDX, 1);
+        return uint256(bytes32(st));
+    }
+
+    /**
+     * @dev Recursive funcion to get the Safe owners list from storage layout
+     * @param safe  Safe contract
+     * @param key Mapping key of OwnerManager.owners
+     * @param owners Owners's array used a accumulator
+     */
+    function getOwners_sload(
+        ISafe safe,
+        address key,
+        address[] memory owners
+    ) internal view returns (address[] memory) {
+        bytes32 mappingSlot = keccak256(abi.encode(key, SAFE_OWNERS_SLOT_IDX));
+        bytes memory _storage = safe.getStorageAt(uint256(mappingSlot), 1); // 1 => 32 bytes
+        address owner = abi.decode(_storage, (address));
+
+        // End of the linked list
+        if (owner == SENTINEL_OWNERS) {
+            return owners;
+        }
+
+        address[] memory newOwners = new address[](owners.length + 1);
+        for (uint256 i = 0; i < owners.length; i++) {
+            newOwners[i] = owners[i];
+        }
+        newOwners[owners.length] = owner;
+
+        return getOwners_sload(safe, owner, newOwners);
     }
 
     /**
