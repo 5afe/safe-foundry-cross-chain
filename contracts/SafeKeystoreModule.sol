@@ -101,10 +101,10 @@ contract SafeKeystoreModule {
         uint256 thresholdL1 = getThreshold_sload(safeL1);
 
         // Calculate the message hash
-        bytes32 msgHash = getTxHash(safe, to, value, data, operation);
+        bytes32 txHash = getTxHash(safe, to, value, data, operation);
 
         // Check signatures
-        checkSignatures(msgHash, signatures, thresholdL1, ownersL1);
+        checkSignatures(txHash, signatures, thresholdL1, ownersL1);
 
         // Execute the transaction
         if (
@@ -117,7 +117,7 @@ contract SafeKeystoreModule {
         ) revert ExecutionFailed();
 
         // Increment nonce after successful execution
-        nonces[address(safe)]++;
+        nonces[safe]++;
     }
 
     /**
