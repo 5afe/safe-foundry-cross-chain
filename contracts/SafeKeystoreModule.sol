@@ -29,7 +29,7 @@ contract SafeKeystoreModule {
     error ExecutionFailed();
 
     /**
-     * @dev return the associated keystore Safe(L1) for a given Safe(L2)
+     * @dev returns the associated keystore for a safe
      * @param safe Address of the Safe
      */
     function getKeystore(address safe) public view returns (address) {
@@ -37,7 +37,7 @@ contract SafeKeystoreModule {
     }
 
     /**
-     * @dev return the module nonce associated to a safe
+     * @dev returns the module nonce associated to a safe
      * @param safe Address of the Safe
      */
     function getNonce(address safe) public view returns (uint16) {
@@ -46,6 +46,7 @@ contract SafeKeystoreModule {
 
     /**
      * @dev returns the unique tx hash (msg) to sign for a given tuple (to, value, data, operation) and nonce
+     * @dev msg = keccak256(to, value, data, operation, nonce)
      * @param safe Address of the Safe
      * @param to To
      * @param value Value
@@ -65,7 +66,7 @@ contract SafeKeystoreModule {
     }
 
     /**
-     * @dev Register a keystore Safe(L1) for a given Safe(L2)
+     * @dev Registers a keystore for a given safe
      * @param keystoreAddress Address of the keystore Safe(L1)
      */
     function registerKeystore(address keystoreAddress) public {
@@ -74,7 +75,7 @@ contract SafeKeystoreModule {
     }
 
     /**
-     * @dev Execute a transaction through the SafeKeystoreModule verifying signatures against owners/threshold from another Safe
+     * @dev Execute a transaction through the SafeKeystoreModule verifying signatures against owners/threshold of the keystore
      * @param safe Safe to execute the transaction
      * @param to Recipient of the transaction
      * @param value Value
@@ -111,7 +112,7 @@ contract SafeKeystoreModule {
                 to: to,
                 value: value,
                 data: data,
-                operation: Enum.Operation.Call
+                operation: operation
             })
         ) revert ExecutionFailed();
 
@@ -120,8 +121,7 @@ contract SafeKeystoreModule {
     }
 
     /**
-     * @dev Check signatures
-     * TODO: Review this to handle multiple owners (simplified version)
+     * @dev Check signatures against msg hash and owners/threshold of the keystore
      * @param dataHash Hash of the data
      * @param signatures Signature data that should be verified (ECDSA signature)
      * @param requiredSignatures Threshold
@@ -198,10 +198,13 @@ contract SafeKeystoreModule {
             return owners;
         }
 
+        // Copy to new array
         address[] memory newOwners = new address[](owners.length + 1);
         for (uint256 i = 0; i < owners.length; i++) {
             newOwners[i] = owners[i];
         }
+
+        // Add new owner found
         newOwners[owners.length] = owner;
 
         return getOwners_sload(safe, owner, newOwners);
