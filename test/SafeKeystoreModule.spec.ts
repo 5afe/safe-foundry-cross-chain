@@ -1,9 +1,8 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { expect } from 'chai'
-import { parseUnits, formatEther, JsonRpcProvider, parseEther } from 'ethers'
+import { JsonRpcProvider, parseEther } from 'ethers'
 
 import execKeystoreTransaction from './helpers/execKeystoreTransaction'
-import execSafeTransaction from './helpers/execSafeTransaction'
 import setup from './helpers/setup'
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider'
 

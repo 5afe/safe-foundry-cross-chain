@@ -27,7 +27,7 @@ export default async function setup() {
   const safeL2 = ISafe__factory.connect(safeL2Address, relayer)
   const safeKeystoreModule = SafeKeystoreModule__factory.connect(safeKeystoreModuleAddress, relayer)
 
-  // // fund the safe (1 ETH)
+  // fund the safe (1 ETH)
   await ownerL2.sendTransaction({
     to: safeL2Address,
     value: parseEther('1'),

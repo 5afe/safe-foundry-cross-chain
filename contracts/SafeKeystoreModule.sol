@@ -97,16 +97,15 @@ contract SafeKeystoreModule {
         if (keystore == address(0)) revert NoKeyStoreFound();
 
         // Read keystore state
-        ISafe safeL1 = ISafe(keystore);
-        address[] memory ownersL1;
-        ownersL1 = getOwners_sload(safeL1, SENTINEL_OWNERS, ownersL1);
-        uint256 thresholdL1 = getThreshold_sload(safeL1);
+        address[] memory owners;
+        owners = getOwners_sload(keystore, SENTINEL_OWNERS, owners);
+        uint256 threshold = getThreshold_sload(keystore);
 
         // Calculate the message hash
         bytes32 txHash = getTxHash(safe, to, value, data, operation);
 
         // Check signatures
-        checkSignatures(txHash, signatures, thresholdL1, ownersL1);
+        checkSignatures(txHash, signatures, threshold, owners);
 
         // Execute the transaction
         if (
@@ -124,30 +123,32 @@ contract SafeKeystoreModule {
 
     /**
      * @dev returns a Safe threshold from storage layout
-     * @param safe Address of a Safe
+     * @param keystore Address of a Safe Keystore
      *
-     * TODO: Use l1sload to load threshold (https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)
+     * TODO: Use l1sload to load threshold from a safe on an L1 
+     *       https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc
      */
-    function getThreshold_sload(ISafe safe) internal view returns (uint256) {
-        bytes memory _storage = safe.getStorageAt(SAFE_THRESHOLD_SLOT_IDX, 1);
+    function getThreshold_sload(address keystore) internal view returns (uint256) {
+        bytes memory _storage = ISafe(keystore).getStorageAt(SAFE_THRESHOLD_SLOT_IDX, 1);
         return uint256(bytes32(_storage));
     }
 
     /**
      * @dev Recursive funcion to get the Safe owners list from storage layout
-     * @param safe Address of a Safe
+     * @param keystore Address of a Safe Keystore
      * @param key Mapping key of OwnerManager.owners
      * @param owners Owners's array used as accumulator
      *
-     * TODO: Use l1sload to load owners (https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)
+     * TODO: Use l1sload to load threshold from a safe on an L1 
+     *       https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc
      */
     function getOwners_sload(
-        ISafe safe,
+        address keystore,
         address key,
         address[] memory owners
     ) internal view returns (address[] memory) {
         bytes32 mappingSlot = keccak256(abi.encode(key, SAFE_OWNERS_SLOT_IDX));
-        bytes memory _storage = safe.getStorageAt(uint256(mappingSlot), 1); // 1 => 32 bytes
+        bytes memory _storage = ISafe(keystore).getStorageAt(uint256(mappingSlot), 1); // 1 => 32 bytes
         address owner = abi.decode(_storage, (address));
 
         // End of the linked list
@@ -164,7 +165,7 @@ contract SafeKeystoreModule {
         // Add new owner found
         newOwners[owners.length] = owner;
 
-        return getOwners_sload(safe, owner, newOwners);
+        return getOwners_sload(keystore, owner, newOwners);
     }
 
     /**

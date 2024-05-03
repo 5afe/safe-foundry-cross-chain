@@ -20,11 +20,10 @@ export default async function execKeystoreTransaction(
   for (var signer of signersL1) {
     const signature = await signer.signMessage(getBytes(msg))
     signatures.push(signature)
-    console.log(`---> signatures of ${msg} by ${signer.address} = ${signature}`)
   }
 
   // Execute transaction
-  console.log(`---> executeTransaction :: to=${to}, value=${value}, data=${data}, operation=${operation}, signatures=${concat(signatures)}`)
+  console.log(`---> SafeKeystoreModule.executeTransaction :: to=${to}, value=${value}, data=${data}, operation=${operation}, signatures=${concat(signatures)}`)
   return module.executeTransaction(
     safeL2,
     to,
