@@ -15,5 +15,6 @@ REPORT_GAS=true npx hardhat test
 ```
 
 ## TODO
+- [ ] Add test with ERC20
 - [ ] Include `l1sload` when ready
 - [ ] Support EIP-712 signature
