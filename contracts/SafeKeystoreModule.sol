@@ -89,6 +89,28 @@ contract SafeKeystoreModule {
     }
 
     /**
+     * @dev returns the transaction hash to sign for a given tuple (to, value, data, operation) and nonce
+     * @param safe Address of the Safe
+     * @param to To
+     * @param value Value
+     * @param data Data
+     * @param operation Operation
+     */
+    function getTxHash(
+        address safe,
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) public view returns (bytes32) {
+        uint16 nonce = nonces[safe];
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(to, value, data, operation, nonce)
+        );
+        return msgHash;
+    }
+
+    /**
      * @dev Register a keystore Safe(L1) for a given Safe(L2)
      * @param keystoreAddress Address of the keystore Safe(L1)
      */
@@ -128,17 +150,11 @@ contract SafeKeystoreModule {
         ownersL1 = getOwners_sload(safeL1, SENTINEL_OWNERS, ownersL1);
         uint256 thresholdL1 = getThreshold_sload(safeL1);
 
-        // Get nonce
-        uint16 nonce = nonces[safe];
+        // Calculate the message hash
+        bytes32 msgHash = getTxHash(safe, to, value, data, operation);
 
-        bytes32 msgHash;
-        {
-            // Calculate the message hash
-            msgHash = keccak256(
-                abi.encodePacked(to, value, data, operation, nonce)
-            );
-            checkSignatures(msgHash, signatures, thresholdL1, ownersL1);
-        }
+        // Check signatures
+        checkSignatures(msgHash, signatures, thresholdL1, ownersL1);
 
         // Execute the transaction
         if (
@@ -205,8 +221,6 @@ contract SafeKeystoreModule {
             }
         }
     }
-
-
 
     /**
      * @dev returns a Safe threshold from storage layout

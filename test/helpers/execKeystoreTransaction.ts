@@ -12,13 +12,8 @@ export default async function execKeystoreTransaction(
     signersL1
   }: any
 ) {
-
-  // Build message
-  const nonce = await module.nonces(safeL2)
-  const msg = solidityPackedKeccak256(
-    ["address", "uint256", "bytes", "uint8", "uint16"],
-    [to, value, data, operation, nonce]
-  )
+  // Get message
+  const msg = await module.getTxHash(safeL2, to, value, data, operation)
 
   // Sign message with signerL1
   const signatures = []
@@ -29,7 +24,7 @@ export default async function execKeystoreTransaction(
   }
 
   // Execute transaction
-  console.log(`---> executeTransaction :: to=${to}, value=${value}, data=${data}, operation=${0}, signatures=${concat(signatures)}`)
+  console.log(`---> executeTransaction :: to=${to}, value=${value}, data=${data}, operation=${operation}, signatures=${concat(signatures)}`)
   return module.executeTransaction(
     safeL2,
     to,
