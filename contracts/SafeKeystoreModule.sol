@@ -48,10 +48,10 @@ contract SafeKeystoreModule {
      * @dev returns the unique tx hash (msg) to sign for a given tuple (to, value, data, operation) and nonce
      * @dev msg = keccak256(to, value, data, operation, nonce)
      * @param safe Address of the Safe
-     * @param to To
-     * @param value Value
-     * @param data Data
-     * @param operation Operation
+     * @param to Recipient address for the transaction
+     * @param value Value (ETH) to send
+     * @param data Data (bytes) to execute
+     * @param operation Operation (CALL/DELEGATE_CALL)
      */
     function getTxHash(
         address safe,
@@ -60,9 +60,10 @@ contract SafeKeystoreModule {
         bytes memory data,
         Enum.Operation operation
     ) public view returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(to, value, data, operation, nonces[safe])
-        );
+        return
+            keccak256(
+                abi.encodePacked(to, value, data, operation, nonces[safe])
+            );
     }
 
     /**
@@ -71,17 +72,18 @@ contract SafeKeystoreModule {
      */
     function registerKeystore(address keystoreAddress) public {
         if (keystoreAddress == address(0)) revert InvalidKeystoreAddress();
+        //TODO Check if keystore is a Safe
         keystores[msg.sender] = keystoreAddress;
     }
 
     /**
      * @dev Execute a transaction through the SafeKeystoreModule verifying signatures against owners/threshold of the keystore
-     * @param safe Safe to execute the transaction
-     * @param to Recipient of the transaction
-     * @param value Value
-     * @param data Data
-     * @param operation Operation
-     * @param signatures Signatures
+     * @param safe Address of the Safe to execute the transaction
+     * @param to Recipient address for the transaction
+     * @param value Value (ETH) to send
+     * @param data Data (bytes) to execute
+     * @param operation Operation (CALL/DELEGATE_CALL)
+     * @param signatures Signatures from Keystore owners
      */
     function executeTransaction(
         address safe,
@@ -118,6 +120,51 @@ contract SafeKeystoreModule {
 
         // Increment nonce after successful execution
         nonces[safe]++;
+    }
+
+    /**
+     * @dev returns a Safe threshold from storage layout
+     * @param safe Address of a Safe
+     *
+     * TODO: Use l1sload to load threshold (https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)
+     */
+    function getThreshold_sload(ISafe safe) internal view returns (uint256) {
+        bytes memory _storage = safe.getStorageAt(SAFE_THRESHOLD_SLOT_IDX, 1);
+        return uint256(bytes32(_storage));
+    }
+
+    /**
+     * @dev Recursive funcion to get the Safe owners list from storage layout
+     * @param safe Address of a Safe
+     * @param key Mapping key of OwnerManager.owners
+     * @param owners Owners's array used as accumulator
+     *
+     * TODO: Use l1sload to load owners (https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)
+     */
+    function getOwners_sload(
+        ISafe safe,
+        address key,
+        address[] memory owners
+    ) internal view returns (address[] memory) {
+        bytes32 mappingSlot = keccak256(abi.encode(key, SAFE_OWNERS_SLOT_IDX));
+        bytes memory _storage = safe.getStorageAt(uint256(mappingSlot), 1); // 1 => 32 bytes
+        address owner = abi.decode(_storage, (address));
+
+        // End of the linked list
+        if (owner == SENTINEL_OWNERS) {
+            return owners;
+        }
+
+        // Copy to new array
+        address[] memory newOwners = new address[](owners.length + 1);
+        for (uint256 i = 0; i < owners.length; i++) {
+            newOwners[i] = owners[i];
+        }
+
+        // Add new owner found
+        newOwners[owners.length] = owner;
+
+        return getOwners_sload(safe, owner, newOwners);
     }
 
     /**
@@ -163,51 +210,6 @@ contract SafeKeystoreModule {
 
             if (!found) revert InvalidSignature();
         }
-    }
-
-    /**
-     * @dev returns a Safe threshold from storage layout
-     * @param safe Safe contract
-     *
-     * TODO: Use l1sload to load threshold (https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)
-     */
-    function getThreshold_sload(ISafe safe) internal view returns (uint256) {
-        bytes memory _storage = safe.getStorageAt(SAFE_THRESHOLD_SLOT_IDX, 1);
-        return uint256(bytes32(_storage));
-    }
-
-    /**
-     * @dev Recursive funcion to get the Safe owners list from storage layout
-     * @param safe  Safe contract
-     * @param key Mapping key of OwnerManager.owners
-     * @param owners Owners's array used a accumulator
-     *
-     * TODO: Use l1sload to load owners (https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)
-     */
-    function getOwners_sload(
-        ISafe safe,
-        address key,
-        address[] memory owners
-    ) internal view returns (address[] memory) {
-        bytes32 mappingSlot = keccak256(abi.encode(key, SAFE_OWNERS_SLOT_IDX));
-        bytes memory _storage = safe.getStorageAt(uint256(mappingSlot), 1); // 1 => 32 bytes
-        address owner = abi.decode(_storage, (address));
-
-        // End of the linked list
-        if (owner == SENTINEL_OWNERS) {
-            return owners;
-        }
-
-        // Copy to new array
-        address[] memory newOwners = new address[](owners.length + 1);
-        for (uint256 i = 0; i < owners.length; i++) {
-            newOwners[i] = owners[i];
-        }
-
-        // Add new owner found
-        newOwners[owners.length] = owner;
-
-        return getOwners_sload(safe, owner, newOwners);
     }
 
     /**
