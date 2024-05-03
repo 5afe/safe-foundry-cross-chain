@@ -9,14 +9,15 @@ import execTransaction from './execSafeTransaction'
 import { parseEther } from 'ethers'
 
 export default async function setup() {
-  const [ownerL1, ownerL2, deployer, relayer, recipient] = await hre.ethers.getSigners()
-  const threshold = 1
+  const [owner1L1, owner2L1, ownerL2, deployer, relayer, recipient] = await hre.ethers.getSigners()
+  const thresholdL1 = 2
+  const thresholdL2 = 1
 
   const { safeProxyFactoryAddress, safeMastercopyAddress, safeKeystoreModuleAddress } = await deploySingletons(deployer)
 
   // Create two Safes
-  const safeL1Address = await deploySafeProxy(safeProxyFactoryAddress, safeMastercopyAddress, [ownerL1.address], threshold, deployer)
-  const safeL2Address = await deploySafeProxy(safeProxyFactoryAddress, safeMastercopyAddress, [ownerL2.address], threshold, deployer)
+  const safeL1Address = await deploySafeProxy(safeProxyFactoryAddress, safeMastercopyAddress, [owner1L1.address, owner2L1.address], thresholdL1, deployer)
+  const safeL2Address = await deploySafeProxy(safeProxyFactoryAddress, safeMastercopyAddress, [ownerL2.address], thresholdL2, deployer)
   // const token = await deployTestToken(deployer)
 
   // both the safe and the allowance work by signature
@@ -40,7 +41,7 @@ export default async function setup() {
 
   return {
     //provider
-    provider: ownerL1.provider,
+    provider: owner1L1.provider,
     // safes
     safeL1,
     safeL2,
@@ -49,7 +50,8 @@ export default async function setup() {
     // // test token
     // token,
     // signers
-    ownerL1,
+    owner1L1,
+    owner2L1,
     ownerL2,
     // recipient
     recipient

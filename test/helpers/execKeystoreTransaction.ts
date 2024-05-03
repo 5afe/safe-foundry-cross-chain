@@ -1,7 +1,4 @@
-import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
-
-import { getBytes, solidityPackedKeccak256 } from 'ethers'
-
+import { concat, getBytes, solidityPackedKeccak256 } from 'ethers'
 import { SafeKeystoreModule } from '../../typechain-types'
 
 export default async function execKeystoreTransaction(
@@ -9,8 +6,10 @@ export default async function execKeystoreTransaction(
   {
     safeL2,
     to,
-    amount,
-    signerL1
+    value,
+    data,
+    operation,
+    signersL1
   }: any
 ) {
 
@@ -18,21 +17,25 @@ export default async function execKeystoreTransaction(
   const nonce = await module.nonces(safeL2)
   const msg = solidityPackedKeccak256(
     ["address", "uint256", "bytes", "uint8", "uint16"],
-    [to, amount, "0x", "0", nonce]
+    [to, value, data, operation, nonce]
   )
 
   // Sign message with signerL1
-  const signature = await signerL1.signMessage(getBytes(msg))
-  console.log(`---> signature of ${msg} by ${signerL1.address} = ${signature}`)
+  const signatures = []
+  for (var signer of signersL1) {
+    const signature = await signer.signMessage(getBytes(msg))
+    signatures.push(signature)
+    console.log(`---> signatures of ${msg} by ${signer.address} = ${signature}`)
+  }
 
   // Execute transaction
-  console.log(`---> executeTransaction :: to=${to}, amount=${amount}, data=${"0x"}, operation=${0}, signatures=${signature}`)
+  console.log(`---> executeTransaction :: to=${to}, value=${value}, data=${data}, operation=${0}, signatures=${concat(signatures)}`)
   return module.executeTransaction(
     safeL2,
-    to, 
-    amount, 
-    "0x", 
-    0,
-    signature
+    to,
+    value,
+    data,
+    operation,
+    concat(signatures)
   )
 }
