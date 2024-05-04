@@ -11,10 +11,11 @@ It leverages a precompiled contract called `l1sload` to load a storage slot on t
 ```shell
 yarn install
 npx hardhat compile
-REPORT_GAS=true npx hardhat test
+npx hardhat test
+npx hardhat coverage
 ```
 
 ## TODO
-- [ ] Add test with ERC20
+- [X] Add test with ERC20
 - [ ] Include `l1sload` when ready
 - [ ] Support EIP-712 signature

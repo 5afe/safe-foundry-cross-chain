@@ -22,14 +22,14 @@ contract SafeKeystoreModule {
     mapping(address => uint16) public nonces;
 
     //// Errors
-    error InvalidKeystoreAddress();
-    error NoKeyStoreFound();
+    error InvalidKeystoreAddress(address);
+    error NoKeystoreFound(address);
     error InvalidSignatureCount();
     error InvalidSignature();
     error ExecutionFailed();
 
     /**
-     * @dev returns the associated keystore for a safe
+     * @dev returns the associated keystore of a safe
      * @param safe Address of the Safe
      */
     function getKeystore(address safe) public view returns (address) {
@@ -68,12 +68,12 @@ contract SafeKeystoreModule {
 
     /**
      * @dev Registers a keystore for a given safe
-     * @param keystoreAddress Address of the keystore Safe(L1)
+     * @param keystore Address of the keystore Safe(L1)
      */
-    function registerKeystore(address keystoreAddress) public {
-        if (keystoreAddress == address(0)) revert InvalidKeystoreAddress();
+    function registerKeystore(address keystore) public {
+        if (keystore == address(0)) revert InvalidKeystoreAddress(keystore);
         //TODO Check if keystore is a Safe
-        keystores[msg.sender] = keystoreAddress;
+        keystores[msg.sender] = keystore;
     }
 
     /**
@@ -94,7 +94,7 @@ contract SafeKeystoreModule {
         bytes memory signatures
     ) public {
         address keystore = keystores[safe];
-        if (keystore == address(0)) revert NoKeyStoreFound();
+        if (keystore == address(0)) revert NoKeystoreFound(keystore);
 
         // Read keystore state
         address[] memory owners;
@@ -165,6 +165,7 @@ contract SafeKeystoreModule {
         // Add new owner found
         newOwners[owners.length] = owner;
 
+        // Recursive call
         return getOwners_sload(keystore, owner, newOwners);
     }
 
@@ -205,9 +206,8 @@ contract SafeKeystoreModule {
             );
 
             bool found = false;
-            for (uint256 j = 0; j < owners.length; j++) {
+            for (uint256 j = 0; j < owners.length; j++) 
                 if (currentOwner == owners[j]) found = true;
-            }
 
             if (!found) revert InvalidSignature();
         }

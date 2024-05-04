@@ -1,44 +1,78 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { expect } from 'chai'
-import { JsonRpcProvider, parseEther } from 'ethers'
+import { ContractTransaction, JsonRpcProvider, parseEther } from 'ethers'
 
 import execKeystoreTransaction from './helpers/execKeystoreTransaction'
+import execTransaction from './helpers/execSafeTransaction'
 import setup from './helpers/setup'
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider'
+import { TestToken } from '../typechain-types'
+
+const RECIPIENT_ADDR = "0x2Ac922ceC780521F8fFAb57D26B407936C352b82"
 
 const getETHBalance = async (provider: JsonRpcProvider | HardhatEthersProvider, accountAddr: string) => {
     return provider.getBalance(accountAddr)
 }
 
+const getERC20Balance = async (token: TestToken, accountAddr: string) => {
+    return token.balanceOf(accountAddr)
+}
+
 describe('SafeKeystoreModule', () => {
-    it('Execute ETH transfer with delegated configutation from another Safe', async () => {
-        const { provider, safeL1, safeL2, safeKeystoreModule, owner1L1, owner2L1, ownerL2, recipient } = await loadFixture(setup)
+
+    it('Enables SafeKeystore module on a Safe', async () => {
+        const { safeL2, safeKeystoreModule, ownerL2 } = await loadFixture(setup)
+
+        const keystoreModuleAddress = await safeKeystoreModule.getAddress()
+
+        // Enable KeyStoreModule as module on SafeL2
+        await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(keystoreModuleAddress), ownerL2)
+
+        // Check if KeystoreModule is enabled
+        expect(await safeL2.isModuleEnabled(keystoreModuleAddress)).to.equal(true)
+    })
+
+    it('Registers a keystore to SafeKeystore module', async () => {
+        const { safeL1, safeL2, safeKeystoreModule, ownerL2 } = await loadFixture(setup)
+
+        const keystoreModuleAddress = await safeKeystoreModule.getAddress()
+        const safeL2Address = await safeL2.getAddress()
+        const safeL1Address = await safeL1.getAddress()
+
+        // Enable KeyStoreModule as module on SafeL2
+        await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(keystoreModuleAddress), ownerL2)
+
+        // Register SafeL1 as Keystore for SafeL2
+        await execTransaction(safeL2, await safeKeystoreModule.registerKeystore.populateTransaction(safeL1Address), ownerL2)
+
+        // Check if a Keystore is registered and the nonce set to 0
+        expect(await safeKeystoreModule.getKeystore(safeL2Address)).to.equal(safeL1Address)
+        expect(await safeKeystoreModule.getNonce(safeL2Address)).to.equal(0)
+    })
+
+    it('Executes ETH transfer via SafeKeystore module (inherit state from another state)', async () => {
+        const { provider, safeL1, safeL2, safeKeystoreModule, owner1L1, owner2L1, ownerL2 } = await loadFixture(setup)
 
         const safeL2Address = await safeL2.getAddress()
         const safeL1Address = await safeL1.getAddress()
-        // const tokenAddress = await token.getAddress()
-        const keyStoreModuleAddress = await safeKeystoreModule.getAddress()
+        const keystoreModuleAddress = await safeKeystoreModule.getAddress()
 
         // Check Safes and module configuration
         expect((await safeL1.getOwners())[0]).to.equal(owner1L1.address)
         expect((await safeL1.getOwners())[1]).to.equal(owner2L1.address)
         expect((await safeL2.getOwners())[0]).to.equal(ownerL2.address)
-        expect(await safeL2.isModuleEnabled(keyStoreModuleAddress)).to.equal(true)
-        expect(await safeKeystoreModule.getKeystore(safeL2Address)).to.equal(safeL1Address)
-        expect(await safeKeystoreModule.getNonce(safeL2Address)).to.equal(0)
-        
-        // Send some ETH to SafeL2
-        await ownerL2.sendTransaction({
-            to: safeL2Address,
-            value: parseEther('1'),
-        })
+
+        // Enable KeyStoreModule as module on SafeL2
+        await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(keystoreModuleAddress), ownerL2)
+
+        // Register SafeL1 as Keystore for SafeL2
+        await execTransaction(safeL2, await safeKeystoreModule.registerKeystore.populateTransaction(safeL1Address), ownerL2)
 
         // Execute a transaction through safeKeystoreModule
-        const prevRecipientBal = await getETHBalance(provider, recipient.address)
         const amount = parseEther("0.1")
         await execKeystoreTransaction(safeKeystoreModule, {
             safeL2: safeL2Address,
-            to: recipient.address,
+            to: RECIPIENT_ADDR,
             value: amount,
             data: "0x",
             operation: 0, // CALL
@@ -46,11 +80,47 @@ describe('SafeKeystoreModule', () => {
         })
 
         // Check recipient should have received 0.1 ETH
-        const newRecipientBal = await getETHBalance(provider, recipient.address)
-        expect(newRecipientBal).to.equal(prevRecipientBal + amount)
+        expect(await getETHBalance(provider, RECIPIENT_ADDR)).to.equal(amount)
 
         // Check the nonce has been incremented
         expect(await safeKeystoreModule.getNonce(safeL2Address)).to.equal(1)
     })
 
+    it('Executes ERC20 transfer via SafeKeystore module (inherit state from another state)', async () => {
+        const { safeL1, safeL2, safeKeystoreModule, owner1L1, owner2L1, ownerL2, token } = await loadFixture(setup)
+
+        const safeL2Address = await safeL2.getAddress()
+        const safeL1Address = await safeL1.getAddress()
+        const tokenAddress = await token.getAddress()
+        const keystoreModuleAddress = await safeKeystoreModule.getAddress()
+
+        // Check Safes and module configuration
+        expect((await safeL1.getOwners())[0]).to.equal(owner1L1.address)
+        expect((await safeL1.getOwners())[1]).to.equal(owner2L1.address)
+        expect((await safeL2.getOwners())[0]).to.equal(ownerL2.address)
+
+        // Enable KeyStoreModule as module on SafeL2
+        await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(keystoreModuleAddress), ownerL2)
+
+        // Register SafeL1 as Keystore for SafeL2
+        await execTransaction(safeL2, await safeKeystoreModule.registerKeystore.populateTransaction(safeL1Address), ownerL2)
+
+        // Execute a transaction through safeKeystoreModule
+        const amount = "10"
+        const { data } = await token.transfer.populateTransaction(RECIPIENT_ADDR, 10)
+        await execKeystoreTransaction(safeKeystoreModule, {
+            safeL2: safeL2Address,
+            to: tokenAddress,
+            value: 0,
+            data: data,
+            operation: 0, // CALL
+            signersL1: [owner1L1, owner2L1]
+        })
+
+        // Check recipient should have received 10 TT
+        expect(await getERC20Balance(token, RECIPIENT_ADDR)).to.equal(amount)
+
+        // Check the nonce has been incremented
+        expect(await safeKeystoreModule.getNonce(safeL2Address)).to.equal(1)
+    })
 })
