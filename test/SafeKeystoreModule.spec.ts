@@ -8,6 +8,7 @@ import setup from './helpers/setup'
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider'
 import { TestToken } from '../typechain-types'
 
+const DEAD_SAFE_ADDR = "0x00000000000000000000000000000000dEad5Afe"
 const RECIPIENT_ADDR = "0x2Ac922ceC780521F8fFAb57D26B407936C352b82"
 
 const getETHBalance = async (provider: JsonRpcProvider | HardhatEthersProvider, accountAddr: string) => {
@@ -48,6 +49,14 @@ describe('SafeKeystoreModule', () => {
         // Check if a Keystore is registered and the nonce set to 0
         expect(await safeKeystoreModule.getKeystore(safeL2Address)).to.equal(safeL1Address)
         expect(await safeKeystoreModule.getNonce(safeL2Address)).to.equal(0)
+
+        // Check if the owners has been changed to DEAD_SAFE and the threashold to 1
+        const owners = await safeL2.getOwners();
+        expect(owners.length).to.equal(1)
+        expect(owners[0]).to.equal(DEAD_SAFE_ADDR)
+
+        const threshold = await safeL2.getThreshold()
+        expect(threshold).to.equal(1)
     })
 
     it('Executes ETH transfer via SafeKeystore module (inherit state from another state)', async () => {
@@ -56,11 +65,6 @@ describe('SafeKeystoreModule', () => {
         const safeL2Address = await safeL2.getAddress()
         const safeL1Address = await safeL1.getAddress()
         const keystoreModuleAddress = await safeKeystoreModule.getAddress()
-
-        // Check Safes and module configuration
-        expect((await safeL1.getOwners())[0]).to.equal(owner1L1.address)
-        expect((await safeL1.getOwners())[1]).to.equal(owner2L1.address)
-        expect((await safeL2.getOwners())[0]).to.equal(ownerL2.address)
 
         // Enable KeyStoreModule as module on SafeL2
         await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(keystoreModuleAddress), ownerL2)
@@ -93,11 +97,6 @@ describe('SafeKeystoreModule', () => {
         const safeL1Address = await safeL1.getAddress()
         const tokenAddress = await token.getAddress()
         const keystoreModuleAddress = await safeKeystoreModule.getAddress()
-
-        // Check Safes and module configuration
-        expect((await safeL1.getOwners())[0]).to.equal(owner1L1.address)
-        expect((await safeL1.getOwners())[1]).to.equal(owner2L1.address)
-        expect((await safeL2.getOwners())[0]).to.equal(ownerL2.address)
 
         // Enable KeyStoreModule as module on SafeL2
         await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(keystoreModuleAddress), ownerL2)
