@@ -4,17 +4,13 @@ pragma solidity >=0.7.0 <0.9.0;
 import "./ISafe.sol";
 import "hardhat/console.sol";
 
-/// @title XXXX
-/// @notice XXXX
-/// @author Greg Jeanmart - @gjeanmart
+/**
+ * @title SafeDisableLocalKeystoreGuard
+ * @dev A guard that disables the method safe.execTransaction(...) if the safeRemoteKeystoreModule is enabled
+ * @author Greg Jeanmart - @gjeanmart
+ */
 contract SafeDisableLocalKeystoreGuard is BaseGuard {
     address public immutable safeRemoteKeystoreModule;
-
-    // solhint-disable-next-line payable-fallback
-    fallback() external {
-        // We don't revert on fallback to avoid issues in case of a Safe upgrade
-        // E.g. The expected check method might change and then the Safe would be locked.
-    }
 
     constructor(address _safeRemoteKeystoreModule) {
         safeRemoteKeystoreModule = _safeRemoteKeystoreModule;
