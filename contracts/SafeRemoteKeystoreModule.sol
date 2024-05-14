@@ -2,6 +2,8 @@
 pragma solidity ^0.8.24;
 
 import "./ISafe.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "hardhat/console.sol";
 
 /**
@@ -10,6 +12,7 @@ import "hardhat/console.sol";
  * @author Greg Jeanmart - @gjeanmart
  */
 contract SafeRemoteKeystoreModule {
+
     //// Constants
     uint256 internal constant SAFE_OWNERS_SLOT_IDX = 2;
     uint256 internal constant SAFE_THRESHOLD_SLOT_IDX = 4;
@@ -74,7 +77,7 @@ contract SafeRemoteKeystoreModule {
      */
     function registerKeystore(address keystore, address guard) public {
         if (keystore == address(0)) revert InvalidKeystoreAddress(keystore);
-        //TODO::Check if keystore is a Safe
+        //TODO::Check if keystore is a Safe (see ERC165)
 
         // Register the keystore
         keystores[msg.sender] = keystore;
@@ -211,21 +214,11 @@ contract SafeRemoteKeystoreModule {
         if (signatures.length < requiredSignatures * 65)
             revert InvalidSignatureCount();
 
-        address currentOwner;
-        uint256 v; // Implicit conversion from uint8 to uint256 will be done for v received from signatureSplit(...).
-        bytes32 r;
-        bytes32 s;
-        uint256 i;
-        for (i = 0; i < requiredSignatures; i++) {
-            (v, r, s) = signatureSplit(signatures, i);
-            currentOwner = ecrecover(
-                keccak256(
-                    abi.encodePacked(
-                        "\x19Ethereum Signed Message:\n32",
-                        dataHash
-                    )
-                ),
-                uint8(v),
+        for (uint256 i = 0; i < requiredSignatures; i++) {
+            (uint8 v, bytes32 r, bytes32 s) = signatureSplit(signatures, i);
+            address currentOwner = ECDSA.recover(
+                MessageHashUtils.toEthSignedMessageHash(dataHash),
+                v,
                 r,
                 s
             );

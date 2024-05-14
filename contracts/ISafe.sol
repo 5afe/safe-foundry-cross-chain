@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
 library Enum {
     enum Operation {
         Call,
@@ -8,7 +10,7 @@ library Enum {
     }
 }
 
-interface ISafe {
+interface ISafe is IERC165 {
     function execTransaction(
         address to,
         uint256 value,
@@ -51,11 +53,7 @@ interface ISafe {
     function getGuard() external view returns (address guard);
 }
 
-interface IERC165 {
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
-}
-
-interface Guard is IERC165 {
+interface IGuard is IERC165 {
     function checkTransaction(
         address to,
         uint256 value,
@@ -73,10 +71,10 @@ interface Guard is IERC165 {
     function checkAfterExecution(bytes32 txHash, bool success) external;
 }
 
-abstract contract BaseGuard is Guard {
+abstract contract BaseGuard is IGuard {
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return
-            interfaceId == type(Guard).interfaceId || // 0x945b8148
+            interfaceId == type(IGuard).interfaceId || // 0x945b8148
             interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
     }
 }
