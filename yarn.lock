@@ -563,7 +563,7 @@
     deep-eql "^4.0.1"
     ordinal "^1.0.3"
 
-"@nomicfoundation/hardhat-ethers@^3.0.0":
+"@nomicfoundation/hardhat-ethers@^3.0.5":
   version "3.0.5"
   resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-ethers/-/hardhat-ethers-3.0.5.tgz#0422c2123dec7c42e7fb2be8e1691f1d9708db56"
   integrity sha512-RNFe8OtbZK6Ila9kIlHp0+S80/0Bu/3p41HUpaRIoHLm6X3WekTd83vob3rE54Duufu1edCiBDxspBzi2rxHHw==
@@ -571,18 +571,18 @@
     debug "^4.1.1"
     lodash.isequal "^4.5.0"
 
-"@nomicfoundation/hardhat-ignition-ethers@^0.15.0":
-  version "0.15.1"
-  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-ignition-ethers/-/hardhat-ignition-ethers-0.15.1.tgz#bb5f002cee86f43277277cdd8587863599edc905"
-  integrity sha512-FPeE0EbJ+RcBGro9TxODyDffpSPhnG8ra43nJp7/1H2M0S+UkmJUeZlSjAIVfUut1zMwy+57j+PNn07dOr/YmQ==
+"@nomicfoundation/hardhat-ignition-ethers@^0.15.3":
+  version "0.15.3"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-ignition-ethers/-/hardhat-ignition-ethers-0.15.3.tgz#227df52c8769485895ee73232fda106ec857b9bc"
+  integrity sha512-PO3e+CE3N0yQZ+SjXFB5RB4QX5DbiYyDdoNeECiStRcz8qxHPN04qMy4CsVfr/b50hitqGavXSjz9UBKnafYFg==
 
-"@nomicfoundation/hardhat-ignition@^0.15.0":
-  version "0.15.1"
-  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-ignition/-/hardhat-ignition-0.15.1.tgz#7d99d9e4ce97faf37e07e8761d7bf2bd659cc0c6"
-  integrity sha512-hWV/W9ZdG9HIqUiQXexrwoBBGP4IrDLghlZPAXXEXETmJ2AVPnBKQG626YmAYgEk2G3vX9ojn16daT+H2i/mFA==
+"@nomicfoundation/hardhat-ignition@^0.15.3":
+  version "0.15.3"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-ignition/-/hardhat-ignition-0.15.3.tgz#0a0de22264673918c33b5f70152da4fb98d133bc"
+  integrity sha512-gwCSI615nZmHu004L0Wp/J3Md+Pc8ipNzWD1x+UtFNdlf9R2hVhjSgp80tD/PMAJWzp8+DiTyQuX2dSZziJ4pQ==
   dependencies:
-    "@nomicfoundation/ignition-core" "^0.15.1"
-    "@nomicfoundation/ignition-ui" "^0.15.1"
+    "@nomicfoundation/ignition-core" "^0.15.3"
+    "@nomicfoundation/ignition-ui" "^0.15.2"
     chalk "^4.0.0"
     debug "^4.3.2"
     fs-extra "^10.0.0"
@@ -600,7 +600,7 @@
   resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-toolbox/-/hardhat-toolbox-5.0.0.tgz#165b47f8a3d2bf668cc5d453ce7f496a1156948d"
   integrity sha512-FnUtUC5PsakCbwiVNsqlXVIWG5JIb5CEZoSXbJUsEBun22Bivx2jhF1/q9iQbzuaGpJKFQyOhemPB2+XlEE6pQ==
 
-"@nomicfoundation/hardhat-verify@^2.0.0":
+"@nomicfoundation/hardhat-verify@^2.0.6":
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-verify/-/hardhat-verify-2.0.6.tgz#02623c431244c92a852c524008239fc616e1c658"
   integrity sha512-oKUI5fl8QC8jysE2LUBHE6rObzEmccJcc4b43Ov7LFMlCBZJE27qoqGIsg/++wX7L8Jdga+bkejPxl8NvsecpQ==
@@ -615,10 +615,10 @@
     table "^6.8.0"
     undici "^5.14.0"
 
-"@nomicfoundation/ignition-core@^0.15.1":
-  version "0.15.1"
-  resolved "https://registry.yarnpkg.com/@nomicfoundation/ignition-core/-/ignition-core-0.15.1.tgz#b310fbf1978a17d015eaa8c63e058c1f7287df9d"
-  integrity sha512-/AZO0YHRv1+yQSOtSSbg4GEH9YhU8EVePSfByU2PZW2bsAK0SA8GdoLYFbVNl140dogem5lrE+bCKtX0eN/n+A==
+"@nomicfoundation/ignition-core@^0.15.3":
+  version "0.15.3"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/ignition-core/-/ignition-core-0.15.3.tgz#e03edb3f6de1c3acc0c6201ab8601c55a0b6626e"
+  integrity sha512-IW2mJVEoVOJYPgD5xRQdsZMi1qoDMOU4Q2bMGEKUm+6tLlIKJOUUvTRVt9tnXeU55rD6mOWbIoqE0OiWizTn/Q==
   dependencies:
     "@ethersproject/address" "5.6.1"
     "@nomicfoundation/solidity-analyzer" "^0.1.1"
@@ -630,10 +630,10 @@
     lodash "4.17.21"
     ndjson "2.0.0"
 
-"@nomicfoundation/ignition-ui@^0.15.1":
-  version "0.15.1"
-  resolved "https://registry.yarnpkg.com/@nomicfoundation/ignition-ui/-/ignition-ui-0.15.1.tgz#57a72e40803eab2236856764078fc2a0ef9234f4"
-  integrity sha512-ecx6M9K4IeF7L0XCcHg0E72zlVaGSOlkhb/9XuWrA2ltfB/e4ZsOhVxXtwDf9xIcaq7tUdMSxyj6Ld0bPAhxAw==
+"@nomicfoundation/ignition-ui@^0.15.2":
+  version "0.15.2"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/ignition-ui/-/ignition-ui-0.15.2.tgz#234d43be06b85546e6b7a9118576e981fb6b6996"
+  integrity sha512-NEX2prbfLEm45KbnBS0imvSgQgwLTgmT8zD3rAPmcIFZx+tLG4lKKw99k6EgEwmKwBiaO2zQMmt+FNoF7xGaiQ==
 
 "@nomicfoundation/solidity-analyzer-darwin-arm64@0.1.1":
   version "0.1.1"
@@ -1907,7 +1907,20 @@ ethers@^5.7.2:
     "@ethersproject/web" "5.7.1"
     "@ethersproject/wordlists" "5.7.0"
 
-ethers@^6.4.0, ethers@^6.7.0:
+ethers@^6.12.1:
+  version "6.12.1"
+  resolved "https://registry.yarnpkg.com/ethers/-/ethers-6.12.1.tgz#517ff6d66d4fd5433e38e903051da3e57c87ff37"
+  integrity sha512-j6wcVoZf06nqEcBbDWkKg8Fp895SS96dSnTCjiXT+8vt2o02raTn4Lo9ERUuIVU5bAjoPYeA+7ytQFexFmLuVw==
+  dependencies:
+    "@adraffy/ens-normalize" "1.10.1"
+    "@noble/curves" "1.2.0"
+    "@noble/hashes" "1.3.2"
+    "@types/node" "18.15.13"
+    aes-js "4.0.0-beta.5"
+    tslib "2.4.0"
+    ws "8.5.0"
+
+ethers@^6.7.0:
   version "6.12.0"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-6.12.0.tgz#b0c2ce207ae5a3b5125be966e32ffea7c1f2481a"
   integrity sha512-zL5NlOTjML239gIvtVJuaSk0N9GQLi1Hom3ZWUszE5lDTQE/IVB62mrPkQ2W1bGcZwVGSLaetQbWNQSvI4rGDQ==
