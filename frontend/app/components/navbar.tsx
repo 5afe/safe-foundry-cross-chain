@@ -9,7 +9,13 @@ function NavBar() {
                     src="https://avatars.githubusercontent.com/u/102983781?s=280&v=4"
                     className="h-8" />
                 <span className="text-2xl whitespace-nowrap block uppercase tracking-wide text-gray-700 font-bold">
-                    Safe x Scroll: Keystore demo
+                    Safe • Scroll
+                </span>
+                <img
+                    src=" https://safe-transaction-assets.staging.5afe.dev/chains/534352/chain_logo.png"
+                    className="h-8" />
+                <span className="text-2xl whitespace-nowrap block tracking-wide text-gray-700 font-bold">
+                    Keystore demo
                 </span>
             </div>
             <div className="hidden w-full md:block md:w-auto" id="navbar-default">

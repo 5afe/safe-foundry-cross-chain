@@ -109,7 +109,6 @@ const load = async (
     {
         adapter,
         safeAddress,
-        keystoreInput,
         setSafe,
         setKeystore,
         setSafeAddrField,
@@ -117,7 +116,6 @@ const load = async (
     }: {
         adapter: EthersAdapter
         safeAddress: string
-        keystoreInput: InputField,
         setSafe: (safe?: SafeInfo) => void,
         setKeystore: (safe?: SafeInfo) => void,
         setSafeAddrField: (inputField: InputField) => void,
@@ -125,6 +123,7 @@ const load = async (
     }
 ) => {
     setSafeAddrField({ value: safeAddress, hasError: false, message: "Loading..." })
+    setKeystoreField(KEYSTORE_FIELD_INIT)
     await fetchSafeInfo({
         adapter,
         safeAddress,
@@ -137,22 +136,23 @@ const load = async (
             const keystoreAddr = await safeKeystoreModuleContract.getKeystore(safe.address)
             // No keystore attached
             if (!safe.modules.includes(config.safe_keystore_module) || keystoreAddr === ZeroAddress) {
-                setKeystoreField({ ...keystoreInput, value: "", hasError: true, message: "No keystore linked", disabled: false })
+                setKeystoreField({ value: "", hasError: true, message: "No keystore linked", disabled: false })
+                setKeystore(undefined)
 
             } else {
                 // Keystore registered
-                setKeystoreField({ ...keystoreInput, value: keystoreAddr, hasError: false, disabled: true, message: "Loading..." })
+                setKeystoreField({ value: keystoreAddr, hasError: false, disabled: true, message: "Loading..." })
 
                 await fetchSafeInfo({
                     adapter,
                     safeAddress: keystoreAddr,
                     onSuccess: async (keystore) => {
                         console.log(`---> keystore=${JSON.stringify(keystore)}`)
+                        setKeystoreField({ value: keystoreAddr, hasError: false, disabled: true, message: makeSafeDescription(keystore) })
                         setKeystore(safe)
-                        setKeystoreField({ ...keystoreInput, value: keystoreAddr, hasError: false, message: makeSafeDescription(keystore) })
                     },
                     onError: async (error) => {
-                        setKeystoreField({ ...keystoreInput, value: keystoreAddr, hasError: true, message: error })
+                        setKeystoreField({ value: keystoreAddr, hasError: true, disabled: true, message: error })
                         setKeystore(undefined)
                     }
                 })
@@ -196,7 +196,6 @@ function Keystore(
                             load({
                                 adapter,
                                 safeAddress: safeAddrField.value,
-                                keystoreInput: keystoreField,
                                 setSafe,
                                 setKeystore,
                                 setSafeAddrField,
@@ -229,7 +228,6 @@ function Keystore(
                             load({
                                 adapter,
                                 safeAddress: address,
-                                keystoreInput: keystoreField,
                                 setSafe,
                                 setKeystore,
                                 setSafeAddrField,

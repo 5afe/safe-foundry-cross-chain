@@ -15,7 +15,6 @@ const AMOUNT_FIELD_INIT = { value: "", message: "", hasError: false, disabled: f
 const performPayment = async ({
     signer,
     safeAddress,
-    keystore,
     to,
     value,
     data,
@@ -24,7 +23,6 @@ const performPayment = async ({
 }: {
     signer: JsonRpcSigner,
     safeAddress: AddressLike,
-    keystore?: SafeInfo,
     to: AddressLike,
     value: BigNumberish
     data: BytesLike,
@@ -54,7 +52,7 @@ const performPayment = async ({
         console.log(`===> signature = ${JSON.stringify(tx)}`)
         await tx.wait()
 
-        await onSuccess({hash: tx.hash})
+        await onSuccess({ hash: tx.hash })
     } catch (error: any) {
         await onError(error.message)
     }
@@ -119,11 +117,12 @@ function Payment({ safe, keystore }: { safe?: SafeInfo, keystore?: SafeInfo }) {
                             setAmountField({ value: amount, hasError: false, message: "" })
                         }} />
                 </div>
-                <div className="w-full md:w-1/4 ">
+                <div className="w-full md:w-1/4 flex flex-row space-x-2">
                     <Button
                         text="Submit"
                         disabled={
-                            !safe
+                            !signer
+                            || !safe
                             || !keystore
                             || !amountField.value
                             || amountField.hasError
@@ -135,8 +134,7 @@ function Payment({ safe, keystore }: { safe?: SafeInfo, keystore?: SafeInfo }) {
                             }
                             performPayment({
                                 signer,
-                                safeAddress: safe?.address,
-                                keystore,
+                                safeAddress: safe.address,
                                 to: recipientField.value,
                                 value: parseEther(amountField.value),
                                 data: "0x",
@@ -149,6 +147,18 @@ function Payment({ safe, keystore }: { safe?: SafeInfo, keystore?: SafeInfo }) {
                             })
                         }}
                     />
+                    <button
+                        type="button"
+                        className="text-sm font-semibold leading-6 text-gray-900"
+                        onClick={
+                            () => {
+                                setRecipientField(RECIPIENT_FIELD_INIT)
+                                setAmountField(AMOUNT_FIELD_INIT)
+                            }
+                        }
+                    >
+                        Reset
+                    </button>
                 </div>
             </div>
         </form>
