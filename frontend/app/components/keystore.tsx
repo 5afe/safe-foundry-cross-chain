@@ -99,10 +99,9 @@ const linkKeystore = async (
         })
         const safeSDK = await Safe.create({ ethAdapter: signerAdapter, safeAddress })
         const safeTransaction = await safeSDK.createTransaction({ transactions })
-        const txResponse = await safeSDK.executeTransaction(safeTransaction)
-        const receipt = await txResponse.transactionResponse?.wait()
+        const tx = await safeSDK.executeTransaction(safeTransaction)
 
-        onSuccess({ hash: receipt?.hash })
+        onSuccess({ hash: tx.hash })
     } catch (error: any) {
         console.log(error)
         onError(error.message)
@@ -308,6 +307,13 @@ function Keystore(
                                     onSuccess: async (result) => {
                                         console.log("linkKeystore:success")
                                         console.log(result)
+                                        setAlert({
+                                            children: <div>
+                                                <div>{`Succesfully relayed transaction`}</div>
+                                                <div>Hash: <code>{result.hash}</code></div>
+                                            </div>,
+                                            type: AlertType.Success
+                                        })
                                     },
                                     onError: async (error) => {
                                         console.error("linkKeystore::error")
