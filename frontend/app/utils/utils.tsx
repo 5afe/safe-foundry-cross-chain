@@ -5,17 +5,20 @@ import type { Account, Chain, Client, Transport } from 'viem'
 import { type Config, useConnectorClient } from 'wagmi'
 import { AiOutlineStop } from "react-icons/ai";
 
-
 export const formatAddr = (addr: AddressLike): string =>
     `0x${addr.toString().substring(2, 4)}...${addr.toString().substring(38, 42)}`
 
 export const makeSafeDescription = ({ owners, threshold, guard }: SafeInfo): React.ReactNode => {
     return <div className="flex flex-row space-x-2 align-middle">
         <span>owners: {owners.map(a => formatAddr(a)).join(", ")} • multisig {threshold}/{owners.length}</span>
-        {guard != ZeroAddress && <AiOutlineStop size="16" className="fill-red-500" />}
+        {guard != ZeroAddress &&
+            <div className="group flex relative">
+                <AiOutlineStop size="16" className="fill-red-500" />
+                <span className="w-[200px] group-hover:opacity-100 transition-opacity bg-red-500 px-1 text-sm text-gray-100 rounded-md absolute left-1/2 -translate-x-1/2 translate-y-full opacity-0">Safe local keystore disabled</span>
+            </div>
+        }
     </div>
 }
-
 
 export const isInt = (number: string) => {
     if (!/^["|']{0,1}[-]{0,1}\d{0,}(\.{0,1}\d+)["|']{0,1}$/.test(number)) return false;

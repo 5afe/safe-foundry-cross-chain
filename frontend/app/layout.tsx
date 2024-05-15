@@ -2,7 +2,7 @@
 
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { wagmiConfig } from "./utils/config"
+import config, { wagmiConfig } from "./utils/config"
 import SafeCoreProvider from "./utils/safe_core_provider";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,6 +19,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <title>{config.page_title}</title>
+      </head>
       <body className={inter.className}>
         <WagmiProvider config={wagmiConfig}>
           <QueryClientProvider client={queryClient}>

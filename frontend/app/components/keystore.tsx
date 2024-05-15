@@ -1,7 +1,7 @@
 import { useContext, useState } from "react"
 import InputText, { InputField } from "./form/input_text"
 import { AddressLike, JsonRpcSigner, ZeroAddress, ethers, formatEther, isAddress, parseEther, toBigInt } from "ethers"
-import { makeSafeDescription, useEthersSigner } from "../utils/utils"
+import { formatAddr, makeSafeDescription, useEthersSigner } from "../utils/utils"
 import Button from "./form/button"
 import { SafeInfo } from "../utils/interfaces"
 import Safe, { EthersAdapter } from "@safe-global/protocol-kit"
@@ -11,6 +11,7 @@ import SafeKeystoreModuleABI from "../utils/abi/safekeystoremodule.abi.json"
 import config from "../utils/config"
 import SafeCoreProvider from "../utils/safe_core_provider"
 import { FaSync } from "react-icons/fa";
+import Alert, { AlertConf, AlertType } from "./alert"
 
 const SAFE_ADDR_FIELD_INIT = { value: "", message: "", hasError: false, disabled: false }
 const KEYSTORE_FIELD_INIT = { value: "", message: "", hasError: false, disabled: true }
@@ -44,10 +45,10 @@ const fetchSafeInfo = async (
             modules,
             guard
         }
-        await onSuccess(safeInfo)
+        onSuccess(safeInfo)
     } catch (error: any) {
         console.log(error)
-        await onError(error.message)
+        onError(error.message)
     }
 }
 
@@ -59,7 +60,7 @@ const linkKeystore = async (
         onSuccess,
         onError
     }: {
-        signer: JsonRpcSigner,
+        signer?: JsonRpcSigner,
         safe: SafeInfo,
         keystoreAddress: AddressLike,
         onSuccess: (result: any) => Promise<void>,
@@ -68,9 +69,11 @@ const linkKeystore = async (
     try {
         const safeAddress = safe.address.toString()
 
+        if (!signer) {
+            throw new Error('You need to connect your Signer wallet');
+        }
         if (!safe.owners.includes(signer.address)) {
-            onError("eeeee")// TODO
-            return;
+            throw new Error(`Invalid Signer wallet ${formatAddr(signer.address)}`);
         }
 
         const safeContract = new ethers.Contract(safeAddress, SafeABI, signer);
@@ -99,9 +102,10 @@ const linkKeystore = async (
         const txResponse = await safeSDK.executeTransaction(safeTransaction)
         const receipt = await txResponse.transactionResponse?.wait()
 
-        await onSuccess({ hash: receipt?.hash })
+        onSuccess({ hash: receipt?.hash })
     } catch (error: any) {
-        await onError(error.message)
+        console.log(error)
+        onError(error.message)
     }
 }
 
@@ -112,18 +116,21 @@ const load = async (
         setSafe,
         setKeystore,
         setSafeAddrField,
-        setKeystoreField
+        setKeystoreField,
+        setAlert
     }: {
         adapter: EthersAdapter
         safeAddress: string
         setSafe: (safe?: SafeInfo) => void,
         setKeystore: (safe?: SafeInfo) => void,
         setSafeAddrField: (inputField: InputField) => void,
-        setKeystoreField: (inputField: InputField) => void
+        setKeystoreField: (inputField: InputField) => void,
+        setAlert: (conf?: AlertConf) => void
     }
 ) => {
     setSafeAddrField({ value: safeAddress, hasError: false, message: "Loading..." })
     setKeystoreField(KEYSTORE_FIELD_INIT)
+    setAlert(undefined)
     await fetchSafeInfo({
         adapter,
         safeAddress,
@@ -149,7 +156,7 @@ const load = async (
                     onSuccess: async (keystore) => {
                         console.log(`---> keystore=${JSON.stringify(keystore)}`)
                         setKeystoreField({ value: keystoreAddr, hasError: false, disabled: true, message: makeSafeDescription(keystore) })
-                        setKeystore(safe)
+                        setKeystore(keystore)
                     },
                     onError: async (error) => {
                         setKeystoreField({ value: keystoreAddr, hasError: true, disabled: true, message: error })
@@ -183,11 +190,12 @@ function Keystore(
 
     const [safeAddrField, setSafeAddrField] = useState<InputField>(SAFE_ADDR_FIELD_INIT)
     const [keystoreField, setKeystoreField] = useState<InputField>(KEYSTORE_FIELD_INIT)
+    const [alert, setAlert] = useState<AlertConf>()
 
     return <main className="flex flex-col items-center justify-between pt-8">
-        <form className="bg-white shadow-md rounded w-[600px] px-8 pt-6">
+        <form className="bg-white shadow-md rounded w-[600px] px-6 pt-6">
             {/** MAIN SAFE SECTION */}
-            <div className="flex flex-wrap -mx-3">
+            <div className="flex flex-wrap">
                 <div className="flex flex-row space-x-2 fleblock uppercase tracking-wide text-gray-700 text-s font-bold mb-2">
                     <span>Keystore Setup</span>
                     <FaSync
@@ -199,7 +207,8 @@ function Keystore(
                                 setSafe,
                                 setKeystore,
                                 setSafeAddrField,
-                                setKeystoreField
+                                setKeystoreField,
+                                setAlert
                             })
                         }} />
                 </div>
@@ -231,7 +240,8 @@ function Keystore(
                                 setSafe,
                                 setKeystore,
                                 setSafeAddrField,
-                                setKeystoreField
+                                setKeystoreField,
+                                setAlert
                             })
                         }} />
                 </div>
@@ -243,7 +253,7 @@ function Keystore(
             </div>
             {/* KEYSTORE SECTION */}
             {safe &&
-                <div className="flex flex-wrap -mx-3">
+                <div className="flex flex-wrap">
                     <div className="w-full md:w-3/4 md:mb-0">
                         <InputText
                             label="Keystore"
@@ -283,12 +293,13 @@ function Keystore(
                                 || keystoreField.hasError
                                 || keystore == null
                                 || (safe ? safe.modules.length > 0 : true)
-                                || !signer
                             }
                             onClick={() => {
-                                if (!safe || !keystore || !signer) {
+                                if (!safe || !keystore) {
                                     return;
                                 }
+
+                                setAlert(undefined)
 
                                 linkKeystore({
                                     signer,
@@ -299,16 +310,28 @@ function Keystore(
                                         console.log(result)
                                     },
                                     onError: async (error) => {
-                                        console.log("linkKeystore::error")
-                                        console.log(error.message)
+                                        console.error("linkKeystore::error")
+                                        console.error(error)
+                                        setAlert({
+                                            children: <span>{error}</span>,
+                                            type: AlertType.Error
+                                        })
                                     }
                                 })
                             }}
                         />
                     </div>
                 </div>}
+            {alert &&
+                <Alert
+                    conf={alert}
+                    onClose={() => setAlert(undefined)}
+                />
+            }
+
+
         </form>
-    </main>
+    </main >
 }
 
 export default Keystore

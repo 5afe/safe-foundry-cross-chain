@@ -23,7 +23,7 @@ function Button(
         </div>
 
         <button
-            className="shadow bg-blue-500 hover:bg-blue-400 focus:shadow-outline focus:outline-none text-white py-2 px-4 rounded text-xs h-[38px] disabled:bg-blue-200"
+            className="w-[180px] shadow bg-blue-500 hover:bg-blue-400 focus:shadow-outline focus:outline-none text-white py-2 px-4 rounded text-xs h-[38px] disabled:bg-blue-200"
             type="button"
             disabled={disabled}
             onClick={onClick}>

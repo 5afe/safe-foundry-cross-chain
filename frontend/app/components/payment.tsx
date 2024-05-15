@@ -1,37 +1,48 @@
 import { useState } from "react"
 import InputText, { InputField } from "./form/input_text"
 import { AddressLike, JsonRpcSigner, ethers, getBytes, isAddress, parseEther, toBigInt } from "ethers"
-import { isFloat, isInt, useEthersSigner } from "../utils/utils"
+import { formatAddr, isFloat, isInt, useEthersSigner } from "../utils/utils"
 import Button from "./form/button"
 import { SafeInfo } from "../utils/interfaces"
 import config from "../utils/config"
 import SafeKeystoreModuleABI from "../utils/abi/safekeystoremodule.abi.json"
 import { BigNumberish } from "ethers"
 import { BytesLike } from "ethers"
+import Alert, { AlertConf, AlertType } from "./alert"
 
 const RECIPIENT_FIELD_INIT = { value: "", message: "", hasError: false, disabled: false }
 const AMOUNT_FIELD_INIT = { value: "", message: "", hasError: false, disabled: false }
 
-const performPayment = async ({
+const signTransaction = async ({
     signer,
     safeAddress,
     to,
     value,
     data,
+    keystore,
     onSuccess,
     onError
 }: {
-    signer: JsonRpcSigner,
+    signer?: JsonRpcSigner,
     safeAddress: AddressLike,
     to: AddressLike,
     value: BigNumberish
     data: BytesLike,
+    keystore?: SafeInfo,
     onSuccess: (result: any) => Promise<void>,
     onError: (error: any) => Promise<void>
 }): Promise<void> => {
     try {
+        if (!signer) {
+            throw new Error('You need to connect your Signer wallet');
+        }
+
+        if (!keystore || !keystore.owners.includes(signer.address)) {
+            throw new Error(`Invalid Signer wallet ${formatAddr(signer.address)}`);
+        }
+
         const operation = 0 // CALL
-        console.log(`===> performPayment`)
+        console.log(`===> signTransaction`)
         const safeKeystoreModuleContract = new ethers.Contract(config.safe_keystore_module, SafeKeystoreModuleABI, signer);
 
         const msg = await safeKeystoreModuleContract.getTxHash(safeAddress, to, value, data, operation)
@@ -39,6 +50,45 @@ const performPayment = async ({
 
         const signature = await signer.signMessage(getBytes(msg))
         console.log(`===> signature = ${signature}`)
+
+        await onSuccess({ msg, signature })
+    } catch (error: any) {
+        await onError(error.message)
+    }
+}
+
+const submitTransaction = async ({
+    signer,
+    safeAddress,
+    to,
+    value,
+    data,
+    signature,
+    keystore,
+    onSuccess,
+    onError
+}: {
+    signer?: JsonRpcSigner,
+    safeAddress: AddressLike,
+    to: AddressLike,
+    value: BigNumberish
+    data: BytesLike,
+    signature: BytesLike,
+    keystore?: SafeInfo,
+    onSuccess: (result: any) => Promise<void>,
+    onError: (error: any) => Promise<void>
+}): Promise<void> => {
+    try {
+        if (!signer) {
+            throw new Error('You need to connect your Signer wallet');
+        }
+        if (!keystore || !keystore.owners.includes(signer.address)) {
+            throw new Error(`Invalid Signer wallet ${formatAddr(signer.address)}`);
+        }
+
+        const operation = 0 // CALL
+        console.log(`===> submitTransaction`)
+        const safeKeystoreModuleContract = new ethers.Contract(config.safe_keystore_module, SafeKeystoreModuleABI, signer);
 
         const tx = await safeKeystoreModuleContract.executeTransaction(
             safeAddress,
@@ -48,9 +98,6 @@ const performPayment = async ({
             operation,
             signature
         )
-
-        console.log(`===> signature = ${JSON.stringify(tx)}`)
-        await tx.wait()
 
         await onSuccess({ hash: tx.hash })
     } catch (error: any) {
@@ -63,10 +110,11 @@ function Payment({ safe, keystore }: { safe?: SafeInfo, keystore?: SafeInfo }) {
 
     const [recipientField, setRecipientField] = useState<InputField>(RECIPIENT_FIELD_INIT)
     const [amountField, setAmountField] = useState<InputField>(AMOUNT_FIELD_INIT)
+    const [alert, setAlert] = useState<AlertConf>()
 
-    return <main className="flex min-h-screen flex-col items-center justify-between p-8">
-        <form className="bg-white shadow-md rounded w-[600px] px-8 pt-6">
-            <div className="flex flex-wrap -mx-3">
+    return <main className="flex flex-col items-center justify-between pt-8">
+        <form className="bg-white shadow-md rounded w-[600px] px-6 pt-6">
+            <div className="flex flex-wrap">
                 <div className="block uppercase tracking-wide text-gray-700 text-s font-bold mb-2">
                     Payment form
                 </div>
@@ -117,32 +165,80 @@ function Payment({ safe, keystore }: { safe?: SafeInfo, keystore?: SafeInfo }) {
                             setAmountField({ value: amount, hasError: false, message: "" })
                         }} />
                 </div>
-                <div className="w-full md:w-1/4 flex flex-row space-x-2">
+                <div className="w-full md:w-1/4 flex flex-row space-x-2 mt-[-24px]">
                     <Button
-                        text="Submit"
+                        text="Sign transaction"
                         disabled={
-                            !signer
-                            || !safe
+                            !safe
                             || !keystore
                             || !amountField.value
                             || amountField.hasError
                             || !recipientField.value
                             || recipientField.hasError}
                         onClick={() => {
-                            if (!safe || !signer) {
+                            if (!safe) {
                                 return;
                             }
-                            performPayment({
+                            setAlert(undefined)
+                            signTransaction({
                                 signer,
                                 safeAddress: safe.address,
                                 to: recipientField.value,
                                 value: parseEther(amountField.value),
                                 data: "0x",
+                                keystore,
                                 onSuccess: async (result) => {
-                                    console.log(`success::${JSON.stringify(result)}`)
+                                    console.log(`signTransaction::success`)
+                                    console.log(result)
+                                    setAlert({
+                                        children: <div>
+                                            <div>{`Succesfully signed message ${formatAddr(signer?.address || "")}`}</div>
+                                            <div>Signature: <code>{result.signature}</code></div>
+                                            <Button
+                                                text="Relay transaction"
+                                                disabled={false}
+                                                onClick={() => {
+                                                    submitTransaction({
+                                                        signer,
+                                                        safeAddress: safe.address,
+                                                        to: recipientField.value,
+                                                        value: parseEther(amountField.value),
+                                                        data: "0x",
+                                                        signature: result.signature,
+                                                        keystore,
+                                                        onSuccess: async (result) => {
+                                                            console.log(`submitTransaction::success`)
+                                                            console.log(result)
+                                                            setAlert({
+                                                                children: <div>
+                                                                    <div>{`Succesfully relayed transaction`}</div>
+                                                                    <div>Hash: <code>{result.hash}</code></div>
+                                                                </div>,
+                                                                type: AlertType.Success
+                                                            })
+                                                        },
+                                                        onError: async (error) => {
+                                                            console.error(`submitTransaction::error`)
+                                                            console.error(error)
+                                                            setAlert({
+                                                                children: <span>{error}</span>,
+                                                                type: AlertType.Error
+                                                            })
+                                                        }
+                                                    })
+                                                }}
+                                            />
+                                        </div>,
+                                        type: AlertType.Success
+                                    })
                                 },
                                 onError: async (error) => {
-                                    console.log(`error::${JSON.stringify(error)}`)
+                                    console.error(`signTransaction::error`)
+                                    console.error(error)
+                                    setAlert({
+                                        children: <span>{error}</span>,
+                                        type: AlertType.Error
+                                    })
                                 }
                             })
                         }}
@@ -154,6 +250,7 @@ function Payment({ safe, keystore }: { safe?: SafeInfo, keystore?: SafeInfo }) {
                             () => {
                                 setRecipientField(RECIPIENT_FIELD_INIT)
                                 setAmountField(AMOUNT_FIELD_INIT)
+                                setAlert(undefined)
                             }
                         }
                     >
@@ -161,6 +258,12 @@ function Payment({ safe, keystore }: { safe?: SafeInfo, keystore?: SafeInfo }) {
                     </button>
                 </div>
             </div>
+            {alert &&
+                <Alert
+                    conf={alert}
+                    onClose={() => setAlert(undefined)}
+                />
+            }
         </form>
     </main >
 }

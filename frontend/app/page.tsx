@@ -13,14 +13,17 @@ export default function Main() {
   return (
     <>
       <NavBar />
-      <Keystore
-        safe={safe}
-        keystore={keystore}
-        setSafe={setSafe}
-        setKeystore={setKeystore} />
-      <Payment
-        safe={safe}
-        keystore={keystore} />
+      <div className="h-dvh">
+        <Keystore
+          safe={safe}
+          keystore={keystore}
+          setSafe={setSafe}
+          setKeystore={setKeystore} />
+        <Payment
+          safe={safe}
+          keystore={keystore} />
+      </div>
+
     </>
   );
 }
