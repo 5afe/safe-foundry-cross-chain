@@ -1,8 +1,8 @@
 import { concat, getBytes, solidityPackedKeccak256 } from 'ethers'
-import { SafeKeystoreModule } from '../../typechain-types'
+import { SafeRemoteKeystoreModule } from '../../typechain-types'
 
 export default async function execKeystoreTransaction(
-  module: SafeKeystoreModule,
+  module: SafeRemoteKeystoreModule,
   {
     safeL2,
     to,

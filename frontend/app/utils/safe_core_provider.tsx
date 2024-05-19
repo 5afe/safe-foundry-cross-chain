@@ -8,16 +8,19 @@ import { EthersAdapter } from "@safe-global/protocol-kit";
 const context = createContext(null as any)
 
 export default function SafeCoreProvider({ children }: { children: React.ReactNode }) {
-    const [safeAdapter, setSafeAdapter] = useState<EthersAdapter>();
+    const [safeAdapter, setSafeAdapter] = useState<{ l1Adapter: EthersAdapter, l2Adapter: EthersAdapter }>();
 
     useEffect(() => {
-        const provider = new ethers.JsonRpcProvider(config.rpc_endpoint)
-        const adapter = new EthersAdapter({
-            ethers,
-            signerOrProvider: provider
+        setSafeAdapter({
+            l1Adapter: new EthersAdapter({
+                ethers,
+                signerOrProvider: new ethers.JsonRpcProvider(config.l1.rpc_endpoint)
+            }), l2Adapter: new EthersAdapter({
+                ethers,
+                signerOrProvider: new ethers.JsonRpcProvider(config.l2.rpc_endpoint)
+            })
         })
-        setSafeAdapter(adapter)
-    }, []); 
+    }, []);
 
     return (
         <context.Provider value={safeAdapter}>

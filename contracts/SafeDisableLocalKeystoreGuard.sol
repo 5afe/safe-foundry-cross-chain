@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity >=0.7.0 <0.9.0;
 
-import "./ISafe.sol";
+import "./interfaces/ISafe.sol";
+import "./SafeRemoteKeystoreModule.sol";
 import "hardhat/console.sol";
 
 /**
@@ -29,8 +30,10 @@ contract SafeDisableLocalKeystoreGuard is BaseGuard {
         bytes memory,
         address
     ) external view override {
+        ISafe safe = ISafe(msg.sender);
+        SafeRemoteKeystoreModule module = SafeRemoteKeystoreModule(safeRemoteKeystoreModule);
         require(
-            !ISafe(msg.sender).isModuleEnabled(safeRemoteKeystoreModule),
+            !safe.isModuleEnabled(safeRemoteKeystoreModule) || module.getKeystore(msg.sender) == address(0),
             "This call is restricted, use safeRemoteKeystoreModule.execTransaction instead."
         );
     }

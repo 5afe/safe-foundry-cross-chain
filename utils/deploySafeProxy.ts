@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
-import { AbiCoder, concat, getCreate2Address, Interface, keccak256, ZeroAddress, ZeroHash } from 'ethers'
+import { AbiCoder, BytesLike, concat, getCreate2Address, hexlify, Interface, keccak256, randomBytes, ZeroAddress, ZeroHash } from 'ethers'
 
 import { ArtifactSafe, ArtifactSafeProxy, ArtifactSafeProxyFactory } from './artifacts'
 
@@ -9,16 +9,20 @@ export default async function deploySafeProxy(
   owners: string[],
   threshold: number,
   deployer: SignerWithAddress,
+  salt?: BytesLike
 ): Promise<string> {
+
+  salt = salt || hexlify(randomBytes(32))
+
   const initializer = calculateInitializer(owners, threshold)
 
   const iface = new Interface(ArtifactSafeProxyFactory.abi)
   await deployer.sendTransaction({
     to: factory,
-    data: iface.encodeFunctionData('createProxyWithNonce', [mastercopy, initializer, ZeroHash]),
+    data: iface.encodeFunctionData('createProxyWithNonce', [mastercopy, initializer, salt]),
   })
 
-  return calculateProxyAddress(initializer, factory, mastercopy)
+  return calculateProxyAddress(initializer, factory, mastercopy, salt)
 }
 
 function calculateInitializer(owners: string[], threshold: number): string {
@@ -26,7 +30,7 @@ function calculateInitializer(owners: string[], threshold: number): string {
 
   const initializer = iface.encodeFunctionData('setup', [
     owners,
-    threshold, 
+    threshold,
     ZeroAddress, // to - for setupModules
     '0x', // data - for setupModules
     ZeroAddress, // fallbackHandler
@@ -38,10 +42,9 @@ function calculateInitializer(owners: string[], threshold: number): string {
   return initializer
 }
 
-function calculateProxyAddress(initializer: string, factory: string, mastercopy: string): string {
-  const salt = keccak256(concat([keccak256(initializer), ZeroHash]))
+function calculateProxyAddress(initializer: string, factory: string, mastercopy: string, salt: BytesLike): string {
 
   const deploymentData = concat([ArtifactSafeProxy.bytecode, AbiCoder.defaultAbiCoder().encode(['address'], [mastercopy])])
 
-  return getCreate2Address(factory, salt, keccak256(deploymentData))
+  return getCreate2Address(factory, keccak256(concat([keccak256(initializer), salt])), keccak256(deploymentData))
 }

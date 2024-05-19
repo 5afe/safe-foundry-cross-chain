@@ -4,7 +4,7 @@ import { AddressLike, JsonRpcSigner, ZeroAddress, ethers, formatEther, isAddress
 import { formatAddr, makeSafeDescription, useEthersSigner } from "../utils/utils"
 import Button from "./form/button"
 import { SafeInfo } from "../utils/interfaces"
-import Safe, { EthersAdapter } from "@safe-global/protocol-kit"
+import Safe, { ContractNetworksConfig, EthersAdapter } from "@safe-global/protocol-kit"
 import { MetaTransactionData } from "@safe-global/safe-core-sdk-types"
 import SafeABI from "../utils/abi/safe.abi.json"
 import SafeKeystoreModuleABI from "../utils/abi/safekeystoremodule.abi.json"
@@ -15,6 +15,22 @@ import Alert, { AlertConf, AlertType } from "./alert"
 
 const SAFE_ADDR_FIELD_INIT = { value: "", message: "", hasError: false, disabled: false }
 const KEYSTORE_FIELD_INIT = { value: "", message: "", hasError: false, disabled: true }
+
+const makeContractNetworks = (chainId: number): ContractNetworksConfig => {
+    const singletons = chainId == config.l2.chain_id ? config.l2.singletons : config.l1.singletons
+    return {
+        [chainId]: {
+            safeSingletonAddress: singletons.safe_singleton_address,
+            safeProxyFactoryAddress: singletons.safe_proxyFactory_address,
+            multiSendAddress: singletons.multi_send_address,
+            multiSendCallOnlyAddress: singletons.multi_send_call_only_address,
+            fallbackHandlerAddress: singletons.fallback_handler_address,
+            signMessageLibAddress: singletons.sign_nessage_lib_address,
+            createCallAddress: singletons.create_call_address,
+            simulateTxAccessorAddress: singletons.simulate_tx_accessor_address,
+        }
+    }
+}
 
 const fetchSafeInfo = async (
     {
@@ -29,7 +45,12 @@ const fetchSafeInfo = async (
         onError: (error: any) => Promise<void>
     }): Promise<void> => {
     try {
-        const safe: Safe = await Safe.create({ ethAdapter: adapter, safeAddress: safeAddress.toString() })
+        const chainId = await adapter.getChainId()
+        const safe: Safe = await Safe.create({
+            ethAdapter: adapter,
+            safeAddress: safeAddress.toString(),
+            contractNetworks: makeContractNetworks(Number(chainId))
+        })
         const [owners, threshold, balance, modules, guard] = await Promise.all([
             safe.getOwners(),
             safe.getThreshold(),
@@ -77,9 +98,9 @@ const linkKeystore = async (
         }
 
         const safeContract = new ethers.Contract(safeAddress, SafeABI, signer);
-        const enableModuleTx = await safeContract.enableModule.populateTransaction(config.safe_keystore_module)
-        const safeKeystoreModuleContract = new ethers.Contract(config.safe_keystore_module, SafeKeystoreModuleABI, signer);
-        const registerKeystoreTx = await safeKeystoreModuleContract.registerKeystore.populateTransaction(keystoreAddress, config.safe_disable_local_keystore_guard)
+        const enableModuleTx = await safeContract.enableModule.populateTransaction(config.l2.singletons.safe_keystore_module)
+        const safeKeystoreModuleContract = new ethers.Contract(config.l2.singletons.safe_keystore_module, SafeKeystoreModuleABI, signer);
+        const registerKeystoreTx = await safeKeystoreModuleContract.registerKeystore.populateTransaction(keystoreAddress, config.l2.singletons.safe_disable_local_keystore_guard)
 
         const transactions: MetaTransactionData[] = [
             {
@@ -88,7 +109,7 @@ const linkKeystore = async (
                 value: "0"
             },
             {
-                to: config.safe_keystore_module,
+                to: config.l2.singletons.safe_keystore_module,
                 data: registerKeystoreTx.data,
                 value: "0",
             }
@@ -97,8 +118,16 @@ const linkKeystore = async (
             ethers,
             signerOrProvider: signer
         })
-        const safeSDK = await Safe.create({ ethAdapter: signerAdapter, safeAddress })
-        const safeTransaction = await safeSDK.createTransaction({ transactions })
+
+        const network = await signer.provider.getNetwork()
+        const safeSDK = await Safe.create({
+            ethAdapter: signerAdapter,
+            safeAddress,
+            contractNetworks: makeContractNetworks(Number(network.chainId))
+        })
+        const safeTransaction = await safeSDK.createTransaction({
+            transactions,
+        })
         const tx = await safeSDK.executeTransaction(safeTransaction)
 
         onSuccess({ hash: tx.hash })
@@ -110,7 +139,8 @@ const linkKeystore = async (
 
 const load = async (
     {
-        adapter,
+        l1Adapter,
+        l2Adapter,
         safeAddress,
         setSafe,
         setKeystore,
@@ -118,7 +148,8 @@ const load = async (
         setKeystoreField,
         setAlert
     }: {
-        adapter: EthersAdapter
+        l1Adapter: EthersAdapter,
+        l2Adapter: EthersAdapter,
         safeAddress: string
         setSafe: (safe?: SafeInfo) => void,
         setKeystore: (safe?: SafeInfo) => void,
@@ -131,17 +162,17 @@ const load = async (
     setKeystoreField(KEYSTORE_FIELD_INIT)
     setAlert(undefined)
     await fetchSafeInfo({
-        adapter,
+        adapter: l2Adapter,
         safeAddress,
         onSuccess: async (safe) => {
             console.log(`---> safe=${JSON.stringify(safe)}`)
             setSafe(safe)
             setSafeAddrField({ value: safeAddress, hasError: false, message: makeSafeDescription(safe) })
 
-            const safeKeystoreModuleContract = new ethers.Contract(config.safe_keystore_module, SafeKeystoreModuleABI, adapter.getProvider());
+            const safeKeystoreModuleContract = new ethers.Contract(config.l2.singletons.safe_keystore_module, SafeKeystoreModuleABI, l2Adapter.getProvider());
             const keystoreAddr = await safeKeystoreModuleContract.getKeystore(safe.address)
             // No keystore attached
-            if (!safe.modules.includes(config.safe_keystore_module) || keystoreAddr === ZeroAddress) {
+            if (!safe.modules.includes(config.l2.singletons.safe_keystore_module) || keystoreAddr === ZeroAddress) {
                 setKeystoreField({ value: "", hasError: true, message: "No keystore linked", disabled: false })
                 setKeystore(undefined)
 
@@ -150,7 +181,7 @@ const load = async (
                 setKeystoreField({ value: keystoreAddr, hasError: false, disabled: true, message: "Loading..." })
 
                 await fetchSafeInfo({
-                    adapter,
+                    adapter: l1Adapter,
                     safeAddress: keystoreAddr,
                     onSuccess: async (keystore) => {
                         console.log(`---> keystore=${JSON.stringify(keystore)}`)
@@ -184,7 +215,8 @@ function Keystore(
         setSafe: (safe?: SafeInfo) => void,
         setKeystore: (keystore?: SafeInfo) => void,
     }) {
-    const adapter = useContext(SafeCoreProvider.context)
+    const l1Adapter = useContext(SafeCoreProvider.context)?.l1Adapter
+    const l2Adapter = useContext(SafeCoreProvider.context)?.l2Adapter
     const signer = useEthersSigner()
 
     const [safeAddrField, setSafeAddrField] = useState<InputField>(SAFE_ADDR_FIELD_INIT)
@@ -201,7 +233,8 @@ function Keystore(
                         className="mt-1 cursor-pointer"
                         onClick={() => {
                             load({
-                                adapter,
+                                l1Adapter,
+                                l2Adapter,
                                 safeAddress: safeAddrField.value,
                                 setSafe,
                                 setKeystore,
@@ -234,7 +267,8 @@ function Keystore(
 
                             // Valid address
                             load({
-                                adapter,
+                                l1Adapter,
+                                l2Adapter,
                                 safeAddress: address,
                                 setSafe,
                                 setKeystore,
@@ -270,7 +304,7 @@ function Keystore(
 
                                 setKeystoreField({ ...keystoreField, value: address, hasError: false, message: "Loading..." })
                                 fetchSafeInfo({
-                                    adapter,
+                                    adapter: l1Adapter,
                                     safeAddress: address,
                                     onSuccess: async (safe) => {
                                         console.log(`---> keystore=${JSON.stringify(safe)}`)

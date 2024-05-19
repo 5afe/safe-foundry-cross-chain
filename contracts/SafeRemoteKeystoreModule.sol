@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "./ISafe.sol";
+import "./interfaces/ISafe.sol";
+import "./interfaces/IL1Blocks.sol";
+import "./interfaces/IL1Sload.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "hardhat/console.sol";
@@ -12,13 +14,16 @@ import "hardhat/console.sol";
  * @author Greg Jeanmart - @gjeanmart
  */
 contract SafeRemoteKeystoreModule {
-
     //// Constants
     uint256 internal constant SAFE_OWNERS_SLOT_IDX = 2;
     uint256 internal constant SAFE_THRESHOLD_SLOT_IDX = 4;
     address internal constant SENTINEL_OWNERS = address(0x1);
 
     //// States
+    // l1sload
+    address public immutable l1Blocks;
+    address public immutable l1Sload;
+
     // Safe -> Safe L1 address
     mapping(address => address) public keystores;
     // Safe -> Module Nonce
@@ -29,8 +34,14 @@ contract SafeRemoteKeystoreModule {
     error NoKeystoreFound(address);
     error InvalidSignatureCount();
     error InvalidSignature();
+    error L1SloadError();
     error RegistrationFailed();
     error ExecutionFailed();
+
+    constructor(address _l1Blocks, address _l1Sload) {
+        l1Blocks = _l1Blocks;
+        l1Sload = _l1Sload;
+    }
 
     /**
      * @dev Returns the associated keystore of a safe
@@ -144,18 +155,11 @@ contract SafeRemoteKeystoreModule {
     /**
      * @dev returns a Safe threshold from storage layout
      * @param keystore Address of a Safe Keystore
-     *
-     * TODO::Use l1sload to load threshold from a safe on an L1
-     *       https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc
      */
     function getThreshold_sload(
         address keystore
     ) internal view returns (uint256) {
-        bytes memory _storage = ISafe(keystore).getStorageAt(
-            SAFE_THRESHOLD_SLOT_IDX,
-            1
-        );
-        return uint256(bytes32(_storage));
+        return l1sload(keystore, bytes32(SAFE_THRESHOLD_SLOT_IDX));
     }
 
     /**
@@ -163,9 +167,6 @@ contract SafeRemoteKeystoreModule {
      * @param keystore Address of a Safe Keystore
      * @param key Mapping key of OwnerManager.owners
      * @param owners Owners's array used as accumulator
-     *
-     * TODO::Use l1sload to load threshold from a safe on an L1
-     *       https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc
      */
     function getOwners_sload(
         address keystore,
@@ -173,11 +174,8 @@ contract SafeRemoteKeystoreModule {
         address[] memory owners
     ) internal view returns (address[] memory) {
         bytes32 mappingSlot = keccak256(abi.encode(key, SAFE_OWNERS_SLOT_IDX));
-        bytes memory _storage = ISafe(keystore).getStorageAt(
-            uint256(mappingSlot),
-            1
-        ); // 1 => 32 bytes
-        address owner = abi.decode(_storage, (address));
+        uint256 _storage = l1sload(keystore, mappingSlot);
+        address owner = address(uint160(_storage));
 
         // End of the linked list
         if (owner == SENTINEL_OWNERS) {
@@ -195,6 +193,42 @@ contract SafeRemoteKeystoreModule {
 
         // Recursive call
         return getOwners_sload(keystore, owner, newOwners);
+    }
+
+    /**
+     * @dev Load L1 state
+     * @param contractAddr Contract address on L1
+     * @param storageKey Storage key to load
+     * 
+     * TODO::Use l1sload to load threshold from a safe on L1
+     *       https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc
+     */
+    function l1sload(
+        address contractAddr,
+        bytes32 storageKey
+    ) internal view returns (uint256) {
+        uint256 l1BlockNum = IL1Blocks(l1Blocks).latestBlockNumber();
+        bytes memory _storage = ISafe(contractAddr).getStorageAt(
+            uint256(storageKey),
+            1
+        );
+        return uint256(bytes32(_storage));
+        //bytes32 result = IL1Sload(l1Sload).l1sload(l1BlockNum, contractAddr, storageKey)
+        // bytes memory input = abi.encodePacked(
+        //     l1BlockNum,
+        //     contractAddr,
+        //     storageKey
+        // );
+        // bool success;
+        // bytes memory ret;
+        // (success, ret) = l1Sload.call(input);
+        // if (success) {
+        //     uint256 number;
+        //     (number) = abi.decode(ret, (uint256));
+        //     return bytes32(number);
+        // } else {
+        //     revert L1SloadError();
+        // }
     }
 
     /**
