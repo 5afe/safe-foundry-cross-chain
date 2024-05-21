@@ -19,6 +19,10 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:8545",
       accounts: ["0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"],
     },
+    scroll_devnet: { // Chain ID: 222222
+      url: "http://34.222.147.164:8545",
+      accounts: [SEPOLIA_PRIVATE_KEY],
+    },
     sepolia: {
       url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
       accounts: [SEPOLIA_PRIVATE_KEY],

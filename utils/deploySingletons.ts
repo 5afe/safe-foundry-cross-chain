@@ -43,6 +43,12 @@ async function isContract(signer: SignerWithAddress, address: AddressLike) {
 
 async function deploySingletonFactory(signer: SignerWithAddress) {
   const { chainId } = await signer.provider.getNetwork()
+
+  // Scroll devnet
+  if(Number(chainId) === 222222) {
+    return "0x6e2674589516E20A412aBC2f611a17Beacd3Ce90"
+  }
+
   const { address, signerAddress, transaction } = getSingletonFactoryInfo(Number(chainId)) as SingletonFactoryInfo
 
   if (await isContract(signer, address)) {

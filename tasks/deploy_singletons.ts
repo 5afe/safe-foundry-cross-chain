@@ -21,13 +21,15 @@ task("deploy_singletons", "Deploys Safe's singletons")
             safeSimulateTxAccessorAddress} = await deploySingletons(deployer)
 
         // L1Blocks & L1Sload
-        const L1BlocksFactory = await hre.ethers.getContractFactory('MockedL1Blocks');
-        const l1Blocks = await L1BlocksFactory.deploy();
-        const l1BlocksAddress = await l1Blocks.getAddress() //TODO CHANGE ME!!!
+        // const L1BlocksFactory = await hre.ethers.getContractFactory('MockedL1Blocks');
+        // const l1Blocks = await L1BlocksFactory.deploy();
+        // const l1BlocksAddress = await l1Blocks.getAddress() //TODO CHANGE ME!!!
+        const l1BlocksAddress = "0x5300000000000000000000000000000000000001"
         
-        const L1SloadFactory = await hre.ethers.getContractFactory('MockedL1Sload');
-        const l1Sload = await L1SloadFactory.deploy();
-        const l1SloadAddress = await l1Sload.getAddress() //TODO CHANGE ME!!!
+        // const L1SloadFactory = await hre.ethers.getContractFactory('MockedL1Sload');
+        // const l1Sload = await L1SloadFactory.deploy();
+        // const l1SloadAddress = await l1Sload.getAddress() //TODO CHANGE ME!!!
+        const l1SloadAddress = "0x0000000000000000000000000000000000000101"
 
         // Deploy SafeDisableLocalKeystoreGuard
         const SafeRemoteKeystoreModuleFactory = await hre.ethers.getContractFactory('SafeRemoteKeystoreModule');

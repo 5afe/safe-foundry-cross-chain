@@ -170,7 +170,7 @@ const load = async (
             setSafeAddrField({ value: safeAddress, hasError: false, message: makeSafeDescription(safe) })
 
             const safeKeystoreModuleContract = new ethers.Contract(config.l2.singletons.safe_keystore_module, SafeKeystoreModuleABI, l2Adapter.getProvider());
-            const keystoreAddr = await safeKeystoreModuleContract.getKeystore(safe.address)
+            const keystoreAddr = await safeKeystoreModuleContract.keystores(safe.address)
             // No keystore attached
             if (!safe.modules.includes(config.l2.singletons.safe_keystore_module) || keystoreAddr === ZeroAddress) {
                 setKeystoreField({ value: "", hasError: true, message: "No keystore linked", disabled: false })
@@ -246,7 +246,7 @@ function Keystore(
                 </div>
                 <div className="w-full md:w-3/4 md:mb-0">
                     <InputText
-                        label="Your Safe"
+                        label="Your Safe (L2)"
                         placeholder="0x..."
                         field={safeAddrField}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,7 +289,7 @@ function Keystore(
                 <div className="flex flex-wrap">
                     <div className="w-full md:w-3/4 md:mb-0">
                         <InputText
-                            label="Keystore"
+                            label="Keystore (L1)"
                             field={keystoreField}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                 const address = e.currentTarget.value

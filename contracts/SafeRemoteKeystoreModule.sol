@@ -44,22 +44,6 @@ contract SafeRemoteKeystoreModule {
     }
 
     /**
-     * @dev Returns the associated keystore of a safe
-     * @param safe Address of the Safe
-     */
-    function getKeystore(address safe) public view returns (address) {
-        return keystores[safe];
-    }
-
-    /**
-     * @dev Returns the module nonce associated to a safe
-     * @param safe Address of the Safe
-     */
-    function getNonce(address safe) public view returns (uint16) {
-        return nonces[safe];
-    }
-
-    /**
      * @dev Returns the unique tx hash (msg) to sign for a given tuple (to, value, data, operation) and nonce
      * @dev msg = keccak256(to, value, data, operation, nonce)
      * @param safe Address of the Safe
@@ -107,15 +91,6 @@ contract SafeRemoteKeystoreModule {
         }
     }
 
-    /**
-     * @dev Execute a transaction through the SafeKeystoreModule verifying signatures against owners/threshold of the keystore
-     * @param safe Address of the Safe to execute the transaction
-     * @param to Recipient address for the transaction
-     * @param value Value (ETH) to send
-     * @param data Data (bytes) to execute
-     * @param operation Operation (CALL/DELEGATE_CALL)
-     * @param signatures Signatures from Keystore owners
-     */
     function executeTransaction(
         address safe,
         address to,
@@ -128,9 +103,9 @@ contract SafeRemoteKeystoreModule {
         if (keystore == address(0)) revert NoKeystoreFound(keystore);
 
         // Read keystore state
+        uint256 threshold = getKeystoreThreshold(keystore);
         address[] memory owners;
-        owners = getOwners_sload(keystore, SENTINEL_OWNERS, owners);
-        uint256 threshold = getThreshold_sload(keystore);
+        owners = getKeystoreOwners(keystore, SENTINEL_OWNERS, owners);
 
         // Calculate the message hash
         bytes32 txHash = getTxHash(safe, to, value, data, operation);
@@ -156,10 +131,8 @@ contract SafeRemoteKeystoreModule {
      * @dev returns a Safe threshold from storage layout
      * @param keystore Address of a Safe Keystore
      */
-    function getThreshold_sload(
-        address keystore
-    ) internal view returns (uint256) {
-        return l1sload(keystore, bytes32(SAFE_THRESHOLD_SLOT_IDX));
+    function getKeystoreThreshold(address keystore) internal view returns (uint256) {
+        return l1sload(keystore, SAFE_THRESHOLD_SLOT_IDX);
     }
 
     /**
@@ -168,14 +141,14 @@ contract SafeRemoteKeystoreModule {
      * @param key Mapping key of OwnerManager.owners
      * @param owners Owners's array used as accumulator
      */
-    function getOwners_sload(
+    function getKeystoreOwners(
         address keystore,
         address key,
         address[] memory owners
     ) internal view returns (address[] memory) {
         bytes32 mappingSlot = keccak256(abi.encode(key, SAFE_OWNERS_SLOT_IDX));
-        uint256 _storage = l1sload(keystore, mappingSlot);
-        address owner = address(uint160(_storage));
+        uint256 sto = l1sload(keystore, uint256(mappingSlot));
+        address owner = address(uint160(sto));
 
         // End of the linked list
         if (owner == SENTINEL_OWNERS) {
@@ -192,43 +165,34 @@ contract SafeRemoteKeystoreModule {
         newOwners[owners.length] = owner;
 
         // Recursive call
-        return getOwners_sload(keystore, owner, newOwners);
+        return getKeystoreOwners(keystore, owner, newOwners);
     }
 
     /**
      * @dev Load L1 state
      * @param contractAddr Contract address on L1
      * @param storageKey Storage key to load
-     * 
-     * TODO::Use l1sload to load threshold from a safe on L1
-     *       https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc
+     *
+     * Use l1sload to load threshold from a safe on L1
+     * -> https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc
      */
     function l1sload(
         address contractAddr,
-        bytes32 storageKey
-    ) internal view returns (uint256) {
+        uint256 storageKey
+    ) public view returns (uint256) {
         uint256 l1BlockNum = IL1Blocks(l1Blocks).latestBlockNumber();
-        bytes memory _storage = ISafe(contractAddr).getStorageAt(
-            uint256(storageKey),
-            1
-        );
-        return uint256(bytes32(_storage));
-        //bytes32 result = IL1Sload(l1Sload).l1sload(l1BlockNum, contractAddr, storageKey)
-        // bytes memory input = abi.encodePacked(
-        //     l1BlockNum,
-        //     contractAddr,
-        //     storageKey
+        // bytes memory _storage = ISafe(contractAddr).getStorageAt(
+        //     uint256(storageKey),
+        //     1
         // );
-        // bool success;
-        // bytes memory ret;
-        // (success, ret) = l1Sload.call(input);
-        // if (success) {
-        //     uint256 number;
-        //     (number) = abi.decode(ret, (uint256));
-        //     return bytes32(number);
-        // } else {
-        //     revert L1SloadError();
-        // }
+        // return uint256(bytes32(_storage));
+        // bytes32 result = IL1Sload(l1Sload).l1sload(l1BlockNum, contractAddr, storageKey)
+        (bool success, bytes memory result) = l1Sload.staticcall(
+            abi.encodePacked(l1BlockNum, contractAddr, storageKey)
+        );
+        if (!success) revert L1SloadError();
+
+        return abi.decode(result, (uint256));
     }
 
     /**

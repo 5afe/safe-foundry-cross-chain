@@ -33,7 +33,7 @@ contract SafeDisableLocalKeystoreGuard is BaseGuard {
         ISafe safe = ISafe(msg.sender);
         SafeRemoteKeystoreModule module = SafeRemoteKeystoreModule(safeRemoteKeystoreModule);
         require(
-            !safe.isModuleEnabled(safeRemoteKeystoreModule) || module.getKeystore(msg.sender) == address(0),
+            !safe.isModuleEnabled(safeRemoteKeystoreModule) || module.keystores(msg.sender) == address(0),
             "This call is restricted, use safeRemoteKeystoreModule.execTransaction instead."
         );
     }

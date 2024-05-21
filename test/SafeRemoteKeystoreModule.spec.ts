@@ -49,8 +49,8 @@ describe('SafeRemoteKeystoreModule', () => {
         await execTransaction(safeL2, await safeRemoteKeystoreModule.registerKeystore.populateTransaction(safeL1Address, safeDisableLocalKeystoreGuardAddress), ownerL2)
 
         // Check if a Keystore is registered and the nonce set to 0
-        expect(await safeRemoteKeystoreModule.getKeystore(safeL2Address)).to.equal(safeL1Address)
-        expect(await safeRemoteKeystoreModule.getNonce(safeL2Address)).to.equal(0)
+        expect(await safeRemoteKeystoreModule.keystores(safeL2Address)).to.equal(safeL1Address)
+        expect(await safeRemoteKeystoreModule.nonces(safeL2Address)).to.equal(0)
 
         // Check if the guard is linked
         const guardStorage = await safeL2.getStorageAt(GUARD_SLOT, 1)
@@ -94,7 +94,7 @@ describe('SafeRemoteKeystoreModule', () => {
         expect(await getETHBalance(provider, RECIPIENT_ADDR)).to.equal(amount)
 
         // Check the nonce has been incremented
-        expect(await safeRemoteKeystoreModule.getNonce(safeL2Address)).to.equal(1)
+        expect(await safeRemoteKeystoreModule.nonces(safeL2Address)).to.equal(1)
     })
 
     it('Executes ERC20 transfer via SafeRemoteKeystore module', async () => {
@@ -128,6 +128,6 @@ describe('SafeRemoteKeystoreModule', () => {
         expect(await getERC20Balance(token, RECIPIENT_ADDR)).to.equal(amount)
 
         // Check the nonce has been incremented
-        expect(await safeRemoteKeystoreModule.getNonce(safeL2Address)).to.equal(1)
+        expect(await safeRemoteKeystoreModule.nonces(safeL2Address)).to.equal(1)
     })
 })

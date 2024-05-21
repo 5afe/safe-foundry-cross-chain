@@ -34,5 +34,5 @@ open http://localhost:3000
 
 ## TODO
 - [X] Add test with ERC20
-- [ ] Include `l1sload` when ready
+- [X] Include `l1sload` when ready
 - [ ] Support EIP-712 signature

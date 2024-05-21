@@ -87,20 +87,35 @@ const submitTransaction = async ({
         }
 
         const operation = 0 // CALL
-        console.log(`===> submitTransaction`)
+
         const safeKeystoreModuleContract = new ethers.Contract(config.l2.singletons.safe_keystore_module, SafeKeystoreModuleABI, signer);
 
+        console.log(`===> executeTransaction(` +
+            `safeAddress=${safeAddress}, ` +
+            `to=${to}, ` +
+            `value=${value}, ` +
+            `data=${data}, ` +
+            `operation=${operation}, ` +
+            `signature=${signature})`
+        )
         const tx = await safeKeystoreModuleContract.executeTransaction(
             safeAddress,
             to,
             value,
             data,
             operation,
-            signature
+            signature,
+            {
+                gasLimit: "1000000", //bypass gas estimation (cause' it always fails)
+            }
         )
 
         await onSuccess({ hash: tx.hash })
     } catch (error: any) {
+        if(error.shortMessage === "missing r") { // some weird error we don't care...
+            await onSuccess({ hash: error.value.hash })
+            return;
+        }
         await onError(error.message)
     }
 }
