@@ -33,8 +33,8 @@ const l1 = {
     multi_send_call_only_address: '0xA1dabEF33b3B82c7814B6D82A79e50F4AC44102B',
     fallback_handler_address: '0x017062a1dE2FE6b99BE3d9d37841FeD19F573804',
     sign_nessage_lib_address: '0x98FFBBF51bb33A056B08ddf711f289936AafF717',
-    create_call_address: '0xB19D6FFc2182150F8Eb585b79D4ABcd7C5640A9d',
-    simulate_tx_accessor_address: '0x727a77a074D1E6c4530e814F89E618a3298FC044',
+    create_call_address: '0x0936FB9B145C158e15Bf41b10eE02B0638D01402',
+    simulate_tx_accessor_address: '0x93158cF3c198122b2A60fCEbe1628d8168fA9aD9',
   }
 }
 
