@@ -3,9 +3,9 @@ pragma solidity ^0.8.24;
 
 import "./interfaces/ISafe.sol";
 import "./interfaces/IL1Blocks.sol";
-import "./interfaces/IL1Sload.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "hardhat/console.sol";
 
 /**
@@ -13,16 +13,19 @@ import "hardhat/console.sol";
  * @dev An extension to the Safe contract that derives its security policy from a Safe on another network (L1)
  * @author Greg Jeanmart - @gjeanmart
  */
-contract SafeRemoteKeystoreModule {
+contract SafeRemoteKeystoreModule is Initializable {
     //// Constants
     uint256 internal constant SAFE_OWNERS_SLOT_IDX = 2;
     uint256 internal constant SAFE_THRESHOLD_SLOT_IDX = 4;
     address internal constant SENTINEL_OWNERS = address(0x1);
 
     //// States
+    // Guard
+    address public guard;
+
     // l1sload
-    address public immutable l1Blocks;
-    address public immutable l1Sload;
+    address public l1Blocks;
+    address public l1Sload;
 
     // Safe -> Safe L1 address
     mapping(address => address) public keystores;
@@ -38,9 +41,14 @@ contract SafeRemoteKeystoreModule {
     error RegistrationFailed();
     error ExecutionFailed();
 
-    constructor(address _l1Blocks, address _l1Sload) {
+    function initialize(
+        address _l1Blocks,
+        address _l1Sload,
+        address _guard
+    ) public initializer {
         l1Blocks = _l1Blocks;
         l1Sload = _l1Sload;
+        guard = _guard;
     }
 
     /**
@@ -68,9 +76,8 @@ contract SafeRemoteKeystoreModule {
     /**
      * @dev Registers a keystore for a given safe and provide an option to set a guard to disable the local keystore
      * @param keystore Address of the keystore Safe(L1)
-     * @param guard Guard to be used to disable the local keystore
      */
-    function registerKeystore(address keystore, address guard) public {
+    function registerKeystore(address keystore) public {
         if (keystore == address(0)) revert InvalidKeystoreAddress(keystore);
         //TODO::Check if keystore is a Safe (see ERC165)
 
@@ -78,7 +85,6 @@ contract SafeRemoteKeystoreModule {
         keystores[msg.sender] = keystore;
 
         // Disable local keystore if a guard is provided
-        // TODO::Guard should be setup at deployment of the module (setup)
         if (guard != address(0)) {
             if (
                 !ISafe(msg.sender).execTransactionFromModule({
@@ -131,7 +137,9 @@ contract SafeRemoteKeystoreModule {
      * @dev returns a Safe threshold from storage layout
      * @param keystore Address of a Safe Keystore
      */
-    function getKeystoreThreshold(address keystore) internal view returns (uint256) {
+    function getKeystoreThreshold(
+        address keystore
+    ) internal view returns (uint256) {
         return l1sload(keystore, SAFE_THRESHOLD_SLOT_IDX);
     }
 
@@ -181,12 +189,6 @@ contract SafeRemoteKeystoreModule {
         uint256 storageKey
     ) public view returns (uint256) {
         uint256 l1BlockNum = IL1Blocks(l1Blocks).latestBlockNumber();
-        // bytes memory _storage = ISafe(contractAddr).getStorageAt(
-        //     uint256(storageKey),
-        //     1
-        // );
-        // return uint256(bytes32(_storage));
-        // bytes32 result = IL1Sload(l1Sload).l1sload(l1BlockNum, contractAddr, storageKey)
         (bool success, bytes memory result) = l1Sload.staticcall(
             abi.encodePacked(l1BlockNum, contractAddr, storageKey)
         );

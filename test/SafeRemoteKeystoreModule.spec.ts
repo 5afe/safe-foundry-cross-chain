@@ -40,16 +40,15 @@ describe('SafeRemoteKeystoreModule', () => {
         const safeRemoteKeystoreModuleAddress = await safeRemoteKeystoreModule.getAddress()
         const safeDisableLocalKeystoreGuardAddress = await safeDisableLocalKeystoreGuard.getAddress()
         const safeL2Address = await safeL2.getAddress()
-        const safeL1Address = await safeL1.getAddress()
 
         // Enable KeyStoreModule as module on SafeL2
         await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(safeRemoteKeystoreModuleAddress), ownerL2)
 
         // Register SafeL1 as Keystore for SafeL2
-        await execTransaction(safeL2, await safeRemoteKeystoreModule.registerKeystore.populateTransaction(safeL1Address, safeDisableLocalKeystoreGuardAddress), ownerL2)
+        await execTransaction(safeL2, await safeRemoteKeystoreModule.registerKeystore.populateTransaction(safeL1), ownerL2)
 
         // Check if a Keystore is registered and the nonce set to 0
-        expect(await safeRemoteKeystoreModule.keystores(safeL2Address)).to.equal(safeL1Address)
+        expect(await safeRemoteKeystoreModule.keystores(safeL2Address)).to.equal(safeL1)
         expect(await safeRemoteKeystoreModule.nonces(safeL2Address)).to.equal(0)
 
         // Check if the guard is linked
@@ -66,18 +65,16 @@ describe('SafeRemoteKeystoreModule', () => {
     })
 
     it('Executes ETH transfer via SafeRemoteKeystore module', async () => {
-        const { provider, safeL1, safeL2, safeRemoteKeystoreModule, safeDisableLocalKeystoreGuard, owner1L1, owner2L1, ownerL2 } = await loadFixture(setup)
+        const { provider, safeL1, safeL2, safeRemoteKeystoreModule, owner1L1, owner2L1, ownerL2 } = await loadFixture(setup)
 
         const safeL2Address = await safeL2.getAddress()
-        const safeL1Address = await safeL1.getAddress()
         const safeRemoteKeystoreModuleAddress = await safeRemoteKeystoreModule.getAddress()
-        const safeDisableLocalKeystoreGuardAddress = await safeDisableLocalKeystoreGuard.getAddress()
 
         // Enable KeyStoreModule as module on SafeL2
         await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(safeRemoteKeystoreModuleAddress), ownerL2)
 
         // Register SafeL1 as Keystore for SafeL2
-        await execTransaction(safeL2, await safeRemoteKeystoreModule.registerKeystore.populateTransaction(safeL1Address, safeDisableLocalKeystoreGuardAddress), ownerL2)
+        await execTransaction(safeL2, await safeRemoteKeystoreModule.registerKeystore.populateTransaction(safeL1), ownerL2)
 
         // Execute a transaction through safeRemtoteKeystoreModule
         const amount = parseEther("0.1")
@@ -98,19 +95,17 @@ describe('SafeRemoteKeystoreModule', () => {
     })
 
     it('Executes ERC20 transfer via SafeRemoteKeystore module', async () => {
-        const { safeL1, safeL2, safeRemoteKeystoreModule, safeDisableLocalKeystoreGuard, owner1L1, owner2L1, ownerL2, token } = await loadFixture(setup)
+        const { safeL1, safeL2, safeRemoteKeystoreModule, owner1L1, owner2L1, ownerL2, token } = await loadFixture(setup)
 
         const safeL2Address = await safeL2.getAddress()
-        const safeL1Address = await safeL1.getAddress()
         const tokenAddress = await token.getAddress()
         const safeRemoteKeystoreModuleAddress = await safeRemoteKeystoreModule.getAddress()
-        const safeDisableLocalKeystoreGuardAddress = await safeDisableLocalKeystoreGuard.getAddress()
 
         // Enable KeyStoreModule as module on SafeL2
         await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(safeRemoteKeystoreModuleAddress), ownerL2)
 
         // Register SafeL1 as Keystore for SafeL2
-        await execTransaction(safeL2, await safeRemoteKeystoreModule.registerKeystore.populateTransaction(safeL1Address, safeDisableLocalKeystoreGuardAddress), ownerL2)
+        await execTransaction(safeL2, await safeRemoteKeystoreModule.registerKeystore.populateTransaction(safeL1), ownerL2)
 
         // Execute a transaction through safeKeystoreModule
         const amount = "10"

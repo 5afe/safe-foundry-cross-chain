@@ -15,7 +15,7 @@ export default async function execKeystoreTransaction(
   // Get message
   const msg = await module.getTxHash(safeL2, to, value, data, operation)
 
-  // Sign message with signerL1
+  // Sign message with signers L1
   const signatures = []
   for (var signer of signersL1) {
     const signature = await signer.signMessage(getBytes(msg))

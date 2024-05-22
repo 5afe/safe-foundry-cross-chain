@@ -2,25 +2,7 @@ import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
 const TITLE = "Safe • Scroll - Keystore demo"
 
-// L2 local
-// const l2 = {
-//   rpc_endpoint: 'http://127.0.0.1:8545',
-//   chain_id: 31337,
-//   currency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-//   singletons: {
-//     safe_singleton_address: '0x41675C099F32341bf84BFc5382aF534df5C7461a',
-//     safe_proxyFactory_address: '0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67',
-//     multi_send_address: '0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526',
-//     multi_send_call_only_address: '0x9641d764fc13c8B624c04430C7356C1C7C8102e2',
-//     fallback_handler_address: '0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99',
-//     sign_nessage_lib_address: '0xd53cd0aB83D845Ac265BE939c57F53AD838012c9',
-//     create_call_address: '0x9b35Af71d77eaf8d7e40252370304687390A1A52',
-//     simulate_tx_accessor_address: '0x3d4BA2E0884aa488718476ca2FB8Efc291A46199',
-//     safe_keystore_module: "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
-//     safe_disable_local_keystore_guard: "0x7a2088a1bFc9d81c55368AE168C2C02570cB814F"
-//   }
-// }
-// Scoll
+// Scoll devnet
 const l2 = {
   rpc_endpoint: 'http://34.222.147.164:8545',
   chain_id: 222222,
@@ -34,26 +16,11 @@ const l2 = {
     sign_nessage_lib_address: '0x872223fDF4618FFe4118E3271d4E787244f6528b',
     create_call_address: '0xaFB1d9cd9638B384E9371b23F2c945458571192E',
     simulate_tx_accessor_address: '0xae0E95C414E88156e603c78185a7B86626B13170',
-    safe_keystore_module: "0x1109924d507afEaDb66620bD749782718Ee368C7",
-    safe_disable_local_keystore_guard: "0x26036c8a4c90e411B06192EEAbC740F84517AAF9"
+    safe_keystore_module:"0x54876a89AE55E3227891823B46c72Bfac8468eC6", 
+    safe_disable_local_keystore_guard: "0x88508FE6fF2bc8b79755aD1cc83acf65980d552D" 
   }
 }
-// L1 Local
-// const l1 = {
-//   rpc_endpoint: 'http://127.0.0.1:8545', // `https://sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`
-//   chain_id: 31337, // 11155111
-//   currency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-//   singletons: {
-//     safe_singleton_address: '0x41675C099F32341bf84BFc5382aF534df5C7461a',
-//     safe_proxyFactory_address: '0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67',
-//     multi_send_address: '0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526',
-//     multi_send_call_only_address: '0x9641d764fc13c8B624c04430C7356C1C7C8102e2',
-//     fallback_handler_address: '0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99',
-//     sign_nessage_lib_address: '0xd53cd0aB83D845Ac265BE939c57F53AD838012c9',
-//     create_call_address: '0x9b35Af71d77eaf8d7e40252370304687390A1A52',
-//     simulate_tx_accessor_address: '0x3d4BA2E0884aa488718476ca2FB8Efc291A46199',
-//   }
-// }
+
 // Sepolia
 const l1 = {
   rpc_endpoint: `https://sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`,

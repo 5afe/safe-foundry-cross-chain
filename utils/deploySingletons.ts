@@ -73,7 +73,7 @@ async function deploySingleton(factory: string, bytecode: string, signer: Signer
   const create2Addr = getCreate2Address(factory, salt, keccak256(bytecode))
 
   if (await isContract(signer, create2Addr)) {
-    // Proxy factory already deployed...
+    // Singleton already deployed...
     return create2Addr
   }
 

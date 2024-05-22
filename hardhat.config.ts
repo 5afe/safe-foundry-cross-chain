@@ -13,7 +13,20 @@ const SEPOLIA_PRIVATE_KEY = vars.get("SEPOLIA_PRIVATE_KEY")
 const REPORT_GAS = vars.get("REPORT_GAS")
 
 const config: HardhatUserConfig = {
-  solidity: SOLIDITY_VERSION,
+  solidity: {
+    version: SOLIDITY_VERSION,
+    settings: { 
+      optimizer: {
+        enabled: true,
+        runs: 200
+      },
+      outputSelection: {
+        "*": {
+          "*": ["storageLayout"]
+        }
+      }
+    }
+  },
   networks: {
     localhost: { // Chain ID: 31337
       url: "http://127.0.0.1:8545",

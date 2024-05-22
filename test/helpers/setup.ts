@@ -1,46 +1,68 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
 import hre, { ethers } from 'hardhat'
 
-import { 
-  SafeRemoteKeystoreModule__factory, 
-  ISafe__factory, 
-  TestToken, 
-  TestToken__factory, 
+import {
+  ISafe__factory,
+  TestToken,
+  TestToken__factory,
   MockedL1Sload__factory,
   MockedL1Sload,
   MockedL1Blocks,
-  MockedL1Blocks__factory,} from '../../typechain-types'
+  MockedL1Blocks__factory,
+} from '../../typechain-types'
 
 import deploySafeProxy from '../../utils/deploySafeProxy'
 import deploySingletons from '../../utils/deploySingletons'
-import { parseEther } from 'ethers'
+import { AbiCoder, getBytes, hexlify, keccak256, parseEther, toUtf8Bytes, zeroPadValue } from 'ethers'
+
+
+const SAFE_L1 = "0x0000000000000000000000000000000000005aFE"
 
 export default async function setup() {
   const [owner1L1, owner2L1, ownerL2, deployer, relayer] = await hre.ethers.getSigners()
-  const thresholdL1 = 2
-  const thresholdL2 = 1
+  const thresholdL1 = "0x02" // 2
+  const thresholdL2 = "0x01"
 
   const { safeProxyFactoryAddress, safeMastercopyAddress } = await deploySingletons(deployer)
 
-  // Create two Safes
-  const safeL1Address = await deploySafeProxy(safeProxyFactoryAddress, safeMastercopyAddress, [owner1L1.address, owner2L1.address], thresholdL1, deployer)
+  // Create Safe
   const safeL2Address = await deploySafeProxy(safeProxyFactoryAddress, safeMastercopyAddress, [ownerL2.address], thresholdL2, deployer)
 
-  // Deploy Test contracts
+  // Deploy Test/Mocks contracts
   const l1Blocks = await deployMockedL1Blocks(deployer)
   const l1sload = await deployMockedL1Sload(deployer)
   const token = await deployTestToken(deployer)
 
+  // Configure Mocks
+  const abiencoder = AbiCoder.defaultAbiCoder()
+  const SENTINEL_ADDR = "0x0000000000000000000000000000000000000001"
+  await l1sload.set(SAFE_L1, zeroPadValue("0x04", 32), zeroPadValue(thresholdL2, 32));
+  await l1sload.set(
+    SAFE_L1,
+    keccak256(abiencoder.encode(["address", "uint256"], [SENTINEL_ADDR, zeroPadValue("0x02", 32)])),
+    zeroPadValue(owner1L1.address, 32));
+  await l1sload.set(
+    SAFE_L1,
+    keccak256(abiencoder.encode(["address", "uint256"], [owner1L1.address, zeroPadValue("0x02", 32)])),
+    zeroPadValue(owner2L1.address, 32));
+  await l1sload.set(
+    SAFE_L1,
+    keccak256(abiencoder.encode(["address", "uint256"], [owner2L1.address, zeroPadValue("0x02", 32)])),
+    zeroPadValue(SENTINEL_ADDR, 32));
+
   // Deploy Keystore module
   const SafeRemoteKeystoreModuleContract = await ethers.getContractFactory("SafeRemoteKeystoreModule");
-  const safeRemoteKeystoreModule = await SafeRemoteKeystoreModuleContract.deploy(l1Blocks, l1sload);
+  const safeRemoteKeystoreModule = await SafeRemoteKeystoreModuleContract.deploy();
 
   // Deploy Keystore guard
   const SafeDisableLocalKeystoreGuardContract = await ethers.getContractFactory("SafeDisableLocalKeystoreGuard");
   const safeDisableLocalKeystoreGuard = await SafeDisableLocalKeystoreGuardContract.deploy(safeRemoteKeystoreModule);
 
+  // Configure Keystore module
+  await safeRemoteKeystoreModule.initialize(l1Blocks, l1sload, safeDisableLocalKeystoreGuard)
+
   // Connect Safe
-  const safeL1 = ISafe__factory.connect(safeL1Address, relayer)
+  //const safeL1 = ISafe__factory.connect(safeL1Address, relayer)
   const safeL2 = ISafe__factory.connect(safeL2Address, relayer)
 
   // fund the safe (1 ETH)
@@ -56,11 +78,12 @@ export default async function setup() {
     //provider
     provider: owner1L1.provider,
     // safes
-    safeL1,
+    safeL1: SAFE_L1,
     safeL2,
     // singletons
     safeRemoteKeystoreModule,
     safeDisableLocalKeystoreGuard,
+    l1sload,
     // ERC20 token
     token,
     // signers

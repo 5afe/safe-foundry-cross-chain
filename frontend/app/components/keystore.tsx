@@ -100,7 +100,7 @@ const linkKeystore = async (
         const safeContract = new ethers.Contract(safeAddress, SafeABI, signer);
         const enableModuleTx = await safeContract.enableModule.populateTransaction(config.l2.singletons.safe_keystore_module)
         const safeKeystoreModuleContract = new ethers.Contract(config.l2.singletons.safe_keystore_module, SafeKeystoreModuleABI, signer);
-        const registerKeystoreTx = await safeKeystoreModuleContract.registerKeystore.populateTransaction(keystoreAddress, config.l2.singletons.safe_disable_local_keystore_guard)
+        const registerKeystoreTx = await safeKeystoreModuleContract.registerKeystore.populateTransaction(keystoreAddress)
 
         const transactions: MetaTransactionData[] = [
             {
