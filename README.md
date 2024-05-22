@@ -16,8 +16,8 @@ It leverages a precompiled contract called `l1sload` to load a storage slot on t
 yarn install
 npx hardhat compile
 npx hardhat test
-npx hardhat coverage
-npx hardhat run scripts/deploy.ts --network <network>
+npx hardhat deploy_singletons --network <network>
+npx hardhat deploy_safe --network <network> --factory <factory> --mastercopy <mastercopy> --owner <owner>
 ```
 
 ### Frontend
@@ -33,6 +33,4 @@ open http://localhost:3000
 ![](docs/demo-mockups.png)
 
 ## TODO
-- [X] Add test with ERC20
-- [X] Include `l1sload` when ready
 - [ ] Support EIP-712 signature
