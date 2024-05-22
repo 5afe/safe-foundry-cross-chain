@@ -74,7 +74,7 @@ contract SafeRemoteKeystoreModule is Initializable {
     }
 
     /**
-     * @dev Registers a keystore for a given safe and provide an option to set a guard to disable the local keystore
+     * @dev Registers a keystore for a given safe and set a guard to disable the local keystore
      * @param keystore Address of the keystore Safe(L1)
      */
     function registerKeystore(address keystore) public {
