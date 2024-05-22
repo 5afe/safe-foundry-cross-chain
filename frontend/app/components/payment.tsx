@@ -42,14 +42,9 @@ const signTransaction = async ({
         }
 
         const operation = 0 // CALL
-        console.log(`===> signTransaction`)
         const safeKeystoreModuleContract = new ethers.Contract(config.l2.singletons.safe_keystore_module, SafeKeystoreModuleABI, signer);
-
         const msg = await safeKeystoreModuleContract.getTxHash(safeAddress, to, value, data, operation)
-        console.log(`===> msg to sign = ${msg}`)
-
         const signature = await signer.signMessage(getBytes(msg))
-        console.log(`===> signature = ${signature}`)
 
         await onSuccess({ msg, signature })
     } catch (error: any) {

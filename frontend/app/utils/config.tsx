@@ -2,7 +2,7 @@ import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
 const TITLE = "Safe • Scroll - Keystore demo"
 
-// Scoll devnet
+// Scroll devnet
 const l2 = {
   rpc_endpoint: 'http://34.222.147.164:8545',
   chain_id: 222222,

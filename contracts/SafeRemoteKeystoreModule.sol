@@ -79,7 +79,7 @@ contract SafeRemoteKeystoreModule is Initializable {
      */
     function registerKeystore(address keystore) public {
         if (keystore == address(0)) revert InvalidKeystoreAddress(keystore);
-        //TODO::Check if keystore is a Safe (see ERC165)
+        //TODO::Check if keystore is a Safe (ERC165)
 
         // Register the keystore
         keystores[msg.sender] = keystore;

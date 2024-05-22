@@ -1,6 +1,6 @@
 import { useContext, useState } from "react"
 import InputText, { InputField } from "./form/input_text"
-import { AddressLike, JsonRpcSigner, ZeroAddress, ethers, formatEther, isAddress, parseEther, toBigInt } from "ethers"
+import { AddressLike, JsonRpcSigner, ZeroAddress, ethers, formatEther, isAddress } from "ethers"
 import { formatAddr, makeSafeDescription, useEthersSigner } from "../utils/utils"
 import Button from "./form/button"
 import { SafeInfo } from "../utils/interfaces"

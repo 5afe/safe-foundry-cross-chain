@@ -23,7 +23,6 @@ export default function Main() {
           safe={safe}
           keystore={keystore} />
       </div>
-
     </>
   );
 }
