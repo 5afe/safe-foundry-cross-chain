@@ -21,7 +21,7 @@ contract SafeRemoteKeystoreModule is Initializable {
 
     //// States
     // Guard
-    address public guard;
+    address public keystoreGuard;
 
     // l1sload
     address public l1Blocks;
@@ -44,11 +44,11 @@ contract SafeRemoteKeystoreModule is Initializable {
     function initialize(
         address _l1Blocks,
         address _l1Sload,
-        address _guard
+        address _keystoreGuard
     ) public initializer {
         l1Blocks = _l1Blocks;
         l1Sload = _l1Sload;
-        guard = _guard;
+        keystoreGuard = _keystoreGuard;
     }
 
     /**
@@ -85,16 +85,17 @@ contract SafeRemoteKeystoreModule is Initializable {
         keystores[msg.sender] = keystore;
 
         // Disable local keystore if a guard is provided
-        if (guard != address(0)) {
-            if (
-                !ISafe(msg.sender).execTransactionFromModule({
-                    to: msg.sender,
-                    value: 0,
-                    data: abi.encodeWithSignature("setGuard(address)", guard),
-                    operation: Enum.Operation.Call
-                })
-            ) revert RegistrationFailed();
-        }
+        if (
+            !ISafe(msg.sender).execTransactionFromModule({
+                to: msg.sender,
+                value: 0,
+                data: abi.encodeWithSignature(
+                    "setGuard(address)",
+                    keystoreGuard
+                ),
+                operation: Enum.Operation.Call
+            })
+        ) revert RegistrationFailed();
     }
 
     function executeTransaction(
