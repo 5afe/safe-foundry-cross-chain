@@ -189,9 +189,8 @@ contract SafeRemoteKeystoreModule is Initializable {
         address contractAddr,
         uint256 storageKey
     ) public view returns (uint256) {
-        uint256 l1BlockNum = IL1Blocks(l1Blocks).latestBlockNumber();
         (bool success, bytes memory result) = l1Sload.staticcall(
-            abi.encodePacked(l1BlockNum, contractAddr, storageKey)
+            abi.encodePacked(contractAddr, storageKey)
         );
         if (!success) revert L1SloadError();
 

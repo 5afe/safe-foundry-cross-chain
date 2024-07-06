@@ -4,8 +4,8 @@ const TITLE = "Safe • Scroll - Keystore demo"
 
 // Scroll devnet
 const l2 = {
-  rpc_endpoint: 'http://34.222.147.164:8545',
-  chain_id: 222222,
+  rpc_endpoint: 'https://l1sload-rpc.scroll.io',
+  chain_id: 2227728,
   currency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   singletons: {
     safe_singleton_address: '0x325D7482AEb7D272b395b8D55cE73d827Bd21B82',
