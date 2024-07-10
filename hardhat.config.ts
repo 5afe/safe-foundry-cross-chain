@@ -2,15 +2,22 @@ import { HardhatUserConfig, vars } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 import '@nomicfoundation/hardhat-ignition-ethers';
 import 'solidity-coverage';
-import './tasks/deploy_safe';
-import './tasks/deploy_singletons';
-import './tasks/send_eth';
+import fs from "fs";
+import path from "path";
+
+const artifactsPath = path.join(__dirname, "artifacts");
+
+if (fs.existsSync(artifactsPath)) {
+  require("./tasks/deploy_safe");
+  require("./tasks/deploy_singletons");
+  require("./tasks/send_eth");
+}
 
 const SOLIDITY_VERSION = '0.8.24';
-const COINMARKETCAP_APIKEY = vars.get('COINMARKETCAP_APIKEY');
-const INFURA_API_KEY = vars.get('INFURA_API_KEY');
-const SEPOLIA_PRIVATE_KEY = vars.get('SEPOLIA_PRIVATE_KEY');
-const REPORT_GAS = vars.get('REPORT_GAS');
+const COINMARKETCAP_APIKEY = vars.get('COINMARKETCAP_APIKEY', "");
+const INFURA_API_KEY = vars.get('INFURA_API_KEY', "");
+const SEPOLIA_PRIVATE_KEY = vars.get('SEPOLIA_PRIVATE_KEY', "0x" + '0'.repeat(64));
+const REPORT_GAS = vars.get('REPORT_GAS', "");
 
 const config: HardhatUserConfig = {
   solidity: {
