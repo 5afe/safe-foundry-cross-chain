@@ -4,20 +4,20 @@ const TITLE = "Safe • Scroll - Keystore demo"
 
 // Scroll devnet
 const l2 = {
-  rpc_endpoint: 'http://34.222.147.164:8545',
-  chain_id: 222222,
+  rpc_endpoint: 'https://l1sload-rpc.scroll.io',
+  chain_id: 2227728,
   currency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   singletons: {
-    safe_singleton_address: '0x325D7482AEb7D272b395b8D55cE73d827Bd21B82',
-    safe_proxyFactory_address: '0x620947A78F864Ab30bb8b8F0f1197E806413B5b0',
-    multi_send_address: '0xD720caf00488054BEa3a525b991Ec492B67cEdA3',
-    multi_send_call_only_address: '0x947a50f1df39AC597ff7105CF987AE0cC93973f7',
-    fallback_handler_address: '0xE76a4120C231B5804B690f2dACC51398Ff68a8cf',
-    sign_nessage_lib_address: '0x872223fDF4618FFe4118E3271d4E787244f6528b',
-    create_call_address: '0xaFB1d9cd9638B384E9371b23F2c945458571192E',
-    simulate_tx_accessor_address: '0xae0E95C414E88156e603c78185a7B86626B13170',
-    safe_keystore_module:"0x54876a89AE55E3227891823B46c72Bfac8468eC6", 
-    safe_disable_local_keystore_guard: "0x88508FE6fF2bc8b79755aD1cc83acf65980d552D" 
+    safe_singleton_address: '0x325D7482AEb7D272b395b8D55cE73d827Bd21B82',//
+    safe_proxyFactory_address: '0x620947A78F864Ab30bb8b8F0f1197E806413B5b0',//
+    multi_send_address: '0xD720caf00488054BEa3a525b991Ec492B67cEdA3',//
+    multi_send_call_only_address: '0x947a50f1df39AC597ff7105CF987AE0cC93973f7',//
+    fallback_handler_address: '0xE76a4120C231B5804B690f2dACC51398Ff68a8cf',//
+    sign_nessage_lib_address: '0x872223fDF4618FFe4118E3271d4E787244f6528b',//
+    create_call_address: '0xaFB1d9cd9638B384E9371b23F2c945458571192E',//
+    simulate_tx_accessor_address: '0xae0E95C414E88156e603c78185a7B86626B13170',//
+    safe_keystore_module:"0x7682d8aF47a4E18a0b51e8D73C2e9B461462634a", //
+    safe_disable_local_keystore_guard: "0x97B1ad74679cBA028Ec51Be31de4c0c961A3b5F9" //
   }
 }
 
