@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-
-library Enum {
-    enum Operation {
-        Call,
-        DelegateCall
-    }
-}
+import { IERC165 } from "@safe-global/safe-contracts/contracts/interfaces/IERC165.sol";
+import { Enum } from "@safe-global/safe-contracts/contracts/common/Enum.sol";
 
 interface ISafe is IERC165 {
     function execTransaction(
@@ -38,6 +32,8 @@ interface ISafe is IERC165 {
 
     function isModuleEnabled(address module) external view returns (bool);
 
+    function getModulesPaginated(address start, uint256 pageSize) external view returns (address[] memory array, address next);
+
     function enableModule(address module) external;
 
     function getOwners() external view returns (address[] memory);
@@ -50,31 +46,5 @@ interface ISafe is IERC165 {
 
     function setGuard(address guard) external;
 
-    function getGuard() external view returns (address guard);
-}
-
-interface IGuard is IERC165 {
-    function checkTransaction(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address payable refundReceiver,
-        bytes memory signatures,
-        address msgSender
-    ) external;
-
-    function checkAfterExecution(bytes32 txHash, bool success) external;
-}
-
-abstract contract BaseGuard is IGuard {
-    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
-        return
-            interfaceId == type(IGuard).interfaceId || // 0x945b8148
-            interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
-    }
+    function VERSION() external view returns (string memory);
 }

@@ -2,52 +2,50 @@
 pragma solidity ^0.8.24;
 
 import "./interfaces/ISafe.sol";
-import "./interfaces/IL1Blocks.sol";
+import "./interfaces/IKeyStore.sol";
+import "./interfaces/IVerifier.sol";
+import {Enum} from "@safe-global/safe-contracts/contracts/common/Enum.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "hardhat/console.sol";
 
 /**
- * @title SafeRemoteKeystoreModule
- * @dev An extension to the Safe contract that derives its security policy from a Safe on another network (L1)
+ * @title SafeKeySpaceModule
+ * @dev XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
  * @author Greg Jeanmart - @gjeanmart
  */
-contract SafeRemoteKeystoreModule is Initializable {
+contract SafeKeySpaceModule is Initializable {
     //// Constants
-    uint256 internal constant SAFE_OWNERS_SLOT_IDX = 2;
-    uint256 internal constant SAFE_THRESHOLD_SLOT_IDX = 4;
-    address internal constant SENTINEL_OWNERS = address(0x1);
 
     //// States
     // Guard
     address public keystoreGuard;
 
-    // l1sload
-    address public l1Blocks;
-    address public l1Sload;
+    // Keyspace
+    IKeyStore public keyStore;
+    IVerifier public stateVerifier;
 
-    // Safe -> Safe L1 address
-    mapping(address => address) public keystores;
+    // Safe -> Keyspace Key
+    mapping(address => uint256) public keyspaceKeys;
     // Safe -> Module Nonce
     mapping(address => uint16) public nonces;
 
     //// Errors
-    error InvalidKeystoreAddress(address);
-    error NoKeystoreFound(address);
+    error InvalidKey(uint256);
+    error NoKeySpaceFound(uint256);
     error InvalidSignatureCount();
-    error InvalidSignature();
-    error L1SloadError();
+    error InvalidSignature(bytes);
     error RegistrationFailed();
     error ExecutionFailed();
 
     function initialize(
-        address _l1Blocks,
-        address _l1Sload,
+        address _keyStore, 
+        address _stateVerifier,
         address _keystoreGuard
     ) public initializer {
-        l1Blocks = _l1Blocks;
-        l1Sload = _l1Sload;
+        keyStore = IKeyStore(_keyStore);
+        stateVerifier = IVerifier(_stateVerifier);
         keystoreGuard = _keystoreGuard;
     }
 
@@ -75,14 +73,13 @@ contract SafeRemoteKeystoreModule is Initializable {
 
     /**
      * @dev Registers a keystore for a given safe and set a guard to disable the local keystore
-     * @param keystore Address of the keystore Safe(L1)
+     * @param key Key in the Keystore
      */
-    function registerKeystore(address keystore) public {
-        if (keystore == address(0)) revert InvalidKeystoreAddress(keystore);
-        //TODO::Check if keystore is a Safe (ERC165)
+    function registerKeystore(uint256 key) public {
+        if (key == 0) revert InvalidKey(key);
 
         // Register the keystore
-        keystores[msg.sender] = keystore;
+        keyspaceKeys[msg.sender] = key;
 
         // Disable local keystore if a guard is provided
         if (
@@ -98,27 +95,44 @@ contract SafeRemoteKeystoreModule is Initializable {
         ) revert RegistrationFailed();
     }
 
+    /**
+     * xxx
+     * @param safe xxx
+     * @param to xxx
+     * @param value xxx
+     * @param data xxx
+     * @param operation xxx
+     * @param signatures xxx
+     * @param publicKeyX xxx
+     * @param publicKeyY xxx
+     * @param stateProof xxx
+     */
     function executeTransaction(
         address safe,
         address to,
         uint256 value,
         bytes memory data,
         Enum.Operation operation,
-        bytes memory signatures
+        bytes memory signatures,
+        uint256 publicKeyX,
+        uint256 publicKeyY,
+        bytes memory stateProof
     ) public {
-        address keystore = keystores[safe];
-        if (keystore == address(0)) revert NoKeystoreFound(keystore);
+        uint256 keyspaceKey = keyspaceKeys[safe];
+        if (keyspaceKey == 0) revert NoKeySpaceFound(keyspaceKey);
 
         // Read keystore state
-        uint256 threshold = getKeystoreThreshold(keystore);
-        address[] memory owners;
-        owners = getKeystoreOwners(keystore, SENTINEL_OWNERS, owners);
+        uint256 threshold = 1; // /!\  Hardcoded to one because KeySpace doesn't support multisig setup
+        address[1] memory owners = getOwners(publicKeyX, publicKeyY);
 
         // Calculate the message hash
         bytes32 txHash = getTxHash(safe, to, value, data, operation);
 
         // Check signatures
         checkSignatures(txHash, signatures, threshold, owners);
+
+        // Check Keystore inclusion
+        checkKeystoreInclusion(keyspaceKey, publicKeyX, publicKeyY, stateProof);
 
         // Execute the transaction
         if (
@@ -134,68 +148,44 @@ contract SafeRemoteKeystoreModule is Initializable {
         nonces[safe]++;
     }
 
-    /**
-     * @dev returns a Safe threshold from storage layout
-     * @param keystore Address of a Safe Keystore
-     */
-    function getKeystoreThreshold(
-        address keystore
-    ) internal view returns (uint256) {
-        return l1sload(keystore, SAFE_THRESHOLD_SLOT_IDX);
+    function getOwners(
+        uint256 publicKeyX,
+        uint256 publicKeyY
+    ) internal pure returns (address[1] memory) {
+        bytes memory publicKeyBytes = abi.encode(publicKeyX, publicKeyY);
+        address owner = address(bytes20(keccak256(publicKeyBytes) << 96));
+
+        return [owner]; // /!\ Only one owner because Keyspace doesn't support multisig setup
     }
 
     /**
-     * @dev Recursive funcion to get the Safe owners list from storage layout
-     * @param keystore Address of a Safe Keystore
-     * @param key Mapping key of OwnerManager.owners
-     * @param owners Owners's array used as accumulator
+     * xxxxxxx
+     * @param keyspaceKey xxxxxxx
+     * @param publicKeyX xxxxxxx
+     * @param publicKeyY xxxxxxx
+     * @param stateProof xxxxxxx
      */
-    function getKeystoreOwners(
-        address keystore,
-        address key,
-        address[] memory owners
-    ) internal view returns (address[] memory) {
-        bytes32 mappingSlot = keccak256(abi.encode(key, SAFE_OWNERS_SLOT_IDX));
-        uint256 sto = l1sload(keystore, uint256(mappingSlot));
-        address owner = address(uint160(sto));
+    function checkKeystoreInclusion(
+        uint256 keyspaceKey,
+        uint256 publicKeyX,
+        uint256 publicKeyY,
+        bytes memory stateProof
+    ) internal view returns (bool) { //TODO change public -> internal
+        uint256[] memory data = new uint256[](8);
+        data[0] = publicKeyX;
+        data[1] = publicKeyY;
 
-        // End of the linked list
-        if (owner == SENTINEL_OWNERS) {
-            return owners;
-        }
+        uint256[] memory public_inputs = new uint256[](3);
+        public_inputs[0] = keyspaceKey;
+        public_inputs[1] = keyStore.root();
+        public_inputs[2] = uint256(keccak256(abi.encodePacked(data)) >> 8);
 
-        // Copy to new array
-        address[] memory newOwners = new address[](owners.length + 1);
-        for (uint256 i = 0; i < owners.length; i++) {
-            newOwners[i] = owners[i];
-        }
-
-        // Add new owner found
-        newOwners[owners.length] = owner;
-
-        // Recursive call
-        return getKeystoreOwners(keystore, owner, newOwners);
-    }
-
-    /**
-     * @dev Load L1 state
-     * @param contractAddr Contract address on L1
-     * @param storageKey Storage key to load
-     *
-     * Use l1sload to load threshold from a safe on L1
-     * -> https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc
-     */
-    function l1sload(
-        address contractAddr,
-        uint256 storageKey
-    ) public view returns (uint256) {
-        uint256 l1BlockNum = IL1Blocks(l1Blocks).latestBlockNumber();
-        (bool success, bytes memory result) = l1Sload.staticcall(
-            abi.encodePacked(l1BlockNum, contractAddr, storageKey)
+        require(
+            stateVerifier.Verify(stateProof, public_inputs),
+            "keystore state proof failed"
         );
-        if (!success) revert L1SloadError();
 
-        return abi.decode(result, (uint256));
+        return true;
     }
 
     /**
@@ -209,7 +199,7 @@ contract SafeRemoteKeystoreModule is Initializable {
         bytes32 dataHash,
         bytes memory signatures,
         uint256 requiredSignatures,
-        address[] memory owners
+        address[1] memory owners
     ) internal pure {
         // Check that the provided signature data is not too short
         if (signatures.length < requiredSignatures * 65)
@@ -228,7 +218,7 @@ contract SafeRemoteKeystoreModule is Initializable {
             for (uint256 j = 0; j < owners.length; j++)
                 if (currentOwner == owners[j]) found = true;
 
-            if (!found) revert InvalidSignature();
+            if (!found) revert InvalidSignature(signatures);
         }
     }
 
