@@ -11,22 +11,20 @@ contract MockedL1Sload {
     }
 
     fallback(bytes calldata data) external returns (bytes memory) {
-        (, address contractAddr, uint256 slot) = decodeData(data);
+        (address contractAddr, uint256 slot) = decodeData(data);
         return refs[contractAddr][slot];
     }
 
-    // decode packaed data
+    // decode packed data
     function decodeData(
         bytes memory data
-    ) internal pure returns (uint256, address, uint256) {
-        uint256 x;
-        address y;
-        uint256 z;
+    ) internal pure returns (address, uint256) {
+        address contractAddress;
+        uint256 slot;
         assembly {
-            x := mload(add(data, 0x20))
-            y := mload(add(data, 0x34))
-            z := mload(add(data, 0x54))
+            contractAddress := mload(add(data, 0x14))
+            slot := mload(add(data, 0x34))
         }
-        return (x, y, z);
+        return (contractAddress, slot);
     }
 }

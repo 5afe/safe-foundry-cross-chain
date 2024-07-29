@@ -37,6 +37,7 @@ ignition/deployments/chain-31337
 
 # misc
 .DS_Store
+.vscode
 *.pem
 
 # debug

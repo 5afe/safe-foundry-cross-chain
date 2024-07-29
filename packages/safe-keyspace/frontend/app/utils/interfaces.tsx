@@ -8,5 +8,5 @@ export interface SafeInfo {
   nonce: bigint;
   balance: bigint,
   modules: readonly Address[],
-  //guard: Address
+  guard: Address
 }
