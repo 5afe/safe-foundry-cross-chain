@@ -1,7 +1,7 @@
 
 # Safe{Labs} Cross-Chain
 
-We are building the best Cross-Chain experience with 
+We are building the best Cross-Chain experience with chain-abstraction protocols.
 
 ## Our experimental projects
 
