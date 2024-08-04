@@ -178,7 +178,8 @@ $ npx hardhat change_keystore_owner \
 
 wait for propagation
 - on `sepolia` https://sepolia.etherscan.io/address/0x45b924Ee3EE404E4a9E2a3AFD0AD357eFf79fC49#readContract#F10
-- on `base sepolia` https://sepolia.basescan.org/address/0xa3c95c6fb0151b42C29754FEF66b38dd6Eaa2950#readContract#F2
+- on `base sepolia` https://sepolia.basescan.org/address/0x610A7e97C6D2F1E09e6390F013BFCc39B8EE49e2#readContract#F2
+- on `op sepolia` https://sepolia.basescan.org/address/0x610A7e97C6D2F1E09e6390F013BFCc39B8EE49e2#readContract#F2
 
 
 ### (optional) Update the Keystore root (only on localhost via MockedKeystore)
