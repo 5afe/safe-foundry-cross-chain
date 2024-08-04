@@ -73,7 +73,7 @@ contract SafeKeySpaceModule is ISafeKeySpaceModule, Initializable {
     }
 
     /**
-     * @dev Registers a keystore for a given safe and set a guard to disable the local keystore
+     * @dev Registers a KeySpace key for a given safe and set a guard to disable the local keystore
      * @param key Key in the Keystore
      */
 
@@ -83,7 +83,7 @@ contract SafeKeySpaceModule is ISafeKeySpaceModule, Initializable {
         // Register the keystore
         keyspaceKeys[ msg.sender] = key;
 
-        // Disable local keystore if a guard is provided
+        // Disable method `safe.execTransaction`
         if (
             !ISafe( msg.sender).execTransactionFromModule({
                 to:  msg.sender,
