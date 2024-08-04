@@ -20,7 +20,7 @@ It leverages a precompiled contract called `l1sload` to load a storage slot on t
 - **In collaboration with**: [KeySpace](https://docs.key.space)
 - **Keywords**: `#keystore`
 - **Description**:
-[TO COMPLETE]
+PoC integrating [KeySpace](https://docs.key.space/) to Safe SmartAccount to provide a shared state to manage keys handled by [MKSR (Minimum KeyStore Rollup)](https://hackmd.io/@mdehoog/mksr).
 
 
 ### [Safe x Klaster](./packages/safe-klaster/) `[WIP]`

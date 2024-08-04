@@ -1,8 +1,10 @@
 # Safe x KeySpace
 
-[WIP]
+PoC integrating [KeySpace](https://docs.key.space/) to Safe SmartAccount to provide a shared state to manage keys handled by [MKSR (Minimum KeyStore Rollup)](https://hackmd.io/@mdehoog/mksr).
 
-[ADD DESCRIPTION HERE]
+`SafeKeySpaceModule` Safe module provide the methods
+- `registerKeystore` to link a Safe to a KeySpace key 
+- `executeTransaction` to execute a transaction on behalf of the Safe recovering the signature and checking the signer is included in KeySpace rollup (from provided proofs)
 
 ## Getting started
 
