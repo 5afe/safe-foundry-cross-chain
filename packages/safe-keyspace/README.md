@@ -40,7 +40,7 @@ INFO [06-26|11:37:01.727] Starting HTTP server                     address=:8555
 ```shell
 $ NETWORK=localhost ## networks supported: localhost, sepolia, base_sepolia
 $ PK=<PK> ## the private key of the signer
-$ ROOT=18922104752410089181190121137101702179191413010695720107096429999419838202820 ## root hash of the keystore when using MockedKeystore on localhost (-> https://sepolia.etherscan.io/address/0x45b924ee3ee404e4a9e2a3afd0ad357eff79fc49#readContract#F10)
+$ ROOT=18771300679865010293167752034693535567812946484477666775367256618114830841022 ## root hash of the keystore when using MockedKeystore on localhost (-> https://sepolia.etherscan.io/address/0x45b924ee3ee404e4a9e2a3afd0ad357eff79fc49#readContract#F10)
 
 ```
 
@@ -60,10 +60,11 @@ safeFallbackHandler address: 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99
 safeSignMessageLib address: 0xd53cd0aB83D845Ac265BE939c57F53AD838012c9
 safeCreateCall address: 0x9b35Af71d77eaf8d7e40252370304687390A1A52
 safeSimulateTxAccessor address: 0x3d4BA2E0884aa488718476ca2FB8Efc291A46199
-safeKeySpaceModule address: 0xf6e483345a43e8Da49368B8a672538BE494C1512
-SafeDisableExecTransactionGuard address: 0x19cF2a2C725d376389CA369687dEe06A408AB96B
-Keystore address: 0xa3c95c6fb0151b42C29754FEF66b38dd6Eaa2950
-StateVerifier address: 0x3aEC28C4a6fc29daE0B2c4b8b4a5e6C107Ac8391
+safeKeySpaceModule address: 0x41fbC184BF40abefB5Ab7490BbBE85F11Cd0Ca74
+safeKeySpaceModuleSetup address: 0xCcEa561FC47dE3aDBf7FD0D10C965e057D8AF087
+SafeDisableExecTransactionGuard address: 0xC8B6581bcf4090E6315D325c09CDE1F6E9C1570D
+Keystore address: 0xe0Eb338bfA6A115D268F3c994AbeB099435F434b
+StateVerifier address: 0x1094f9Ba8bE1FD730b1089607390f224De58987B
 ============================================================
 ```
 
@@ -74,9 +75,11 @@ Based on the output above
 ```shell
 $ SAFE_FACTORY=0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67
 $ SAFE_MASTERCOPY=0x41675C099F32341bf84BFc5382aF534df5C7461a
-$ SAFE_KEYSPACE_MODULE=0xf6e483345a43e8Da49368B8a672538BE494C1512
-$ KEYSTORE=0xa3c95c6fb0151b42C29754FEF66b38dd6Eaa2950
-$ SAFE_SALT=0x0000000000000000000000000000000000000000000000000000000000000fff
+$ SAFE_MULTISEND=0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526
+$ SAFE_KEYSPACE_MODULE=0x41fbC184BF40abefB5Ab7490BbBE85F11Cd0Ca74
+$ SAFE_KEYSPACE_MODULE_SETUP=0xCcEa561FC47dE3aDBf7FD0D10C965e057D8AF087
+$ KEYSTORE=0xe0Eb338bfA6A115D268F3c994AbeB099435F434b
+$ SAFE_SALT=0x0000000000000000000000000000000000000000000000000000000000000a1a
 ```
 
 ### (optional) Verify the contract on Etherscan
@@ -94,7 +97,9 @@ $ npx hardhat deploy_safe \
     --network $NETWORK \
     --factory $SAFE_FACTORY \
     --mastercopy $SAFE_MASTERCOPY \
+    --multisend $SAFE_MULTISEND \
     --keystoremodule $SAFE_KEYSPACE_MODULE \
+    --keystoremodulesetup $SAFE_KEYSPACE_MODULE_SETUP \
     --ownerpk $PK \
     --salt $SAFE_SALT
 
@@ -204,12 +209,16 @@ $ npx hardhat exec_safe_keystore_tx \
     --ownerpk $NEW_PK 
 ```
 
+## Frontend
+
+```
+cd frontend
+yarn install
+yarn dev
+open http://localhost:3000
+```
 
 
 ## TODO list
-- [X] Migrate everything to viem
-- [X] tasks to test end to end key rotation
-- [ ] use multisend and initcall when needed
-- [ ] frontend app
 - [ ] ERC-712 support
 - [ ] ERC-4337 support

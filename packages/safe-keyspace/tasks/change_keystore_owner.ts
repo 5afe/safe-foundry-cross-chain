@@ -1,7 +1,7 @@
 
 import { task } from "hardhat/config";
 import { encodeSignature, extractPublicKeyFromWalletClient, getContractInstanceReadOnly, pkToWalletClient } from "../common/utils";
-import { getKeyspaceKey, getRecoverProof, setConfig } from "../test/helpers/keybase";
+import { getKeyspaceKey, getRecoverProof, setConfig } from "../common/keybase";
 import { sign } from "viem/accounts";
 import { fromHex, toHex } from "viem";
 import { ABI } from "../common/artifacts"
@@ -22,7 +22,6 @@ task("change_keystore_owner", "Change Keystore owner")
 
     const newOwnerWallet = pkToWalletClient(readClient, taskArgs.newownerpk)
     const newOwnerPublicKey = await extractPublicKeyFromWalletClient(newOwnerWallet)
-
     const newKey = getKeyspaceKey(newOwnerPublicKey)
     const newKey254 = toHex(fromHex(newKey, "bigint") >> BigInt(2), { size: 32 });
 

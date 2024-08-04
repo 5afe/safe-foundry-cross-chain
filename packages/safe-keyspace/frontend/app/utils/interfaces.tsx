@@ -1,4 +1,4 @@
-import { Address } from "viem";
+import { Address, Hex } from "viem";
 
 export interface SafeInfo {
   address: Address;
@@ -8,5 +8,17 @@ export interface SafeInfo {
   nonce: bigint;
   balance: bigint,
   modules: readonly Address[],
-  guard: Address
+  // guard: Address,
+  keyspaceKey: Hex,
+  keyspaceKeyNonce: number,
+  keystoreAddr: Address,
+  keyspaceValue: Hex,
+  keystoreRoot: bigint
+}
+
+export interface MultiNetworkSafeInfo {
+  address: Address,
+  safes: {
+    [network: string]: SafeInfo
+  }
 }

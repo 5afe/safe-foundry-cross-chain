@@ -3,7 +3,7 @@ import { Hex, createPublicClient, fromHex, http, keccak256, toHex } from 'viem'
 import { poseidonPerm } from '@zk-kit/poseidon-cipher'
 import { baseSepolia } from "viem/chains";
 import { GetConfigProofReturnType, GetRecoverProofReturnType, GetValueReturnType, keyspaceActions, keyspaceRecoveryActions } from './keyspace_client';
-import { PublicKeyPoints } from '../../common/types';
+import { PublicKeyPoints } from './types';
 
 // /!\ Generated KZG commitment instead of one with a trusted setup.
 export const VK_HASH = "0xe513408e896618fd2b4877b44ecc81e6055647f6abb48e0356384fc63b2f72";
@@ -42,6 +42,9 @@ export const getValue = async (key: Hex): Promise<GetValueReturnType> => {
 }
 
 export const getProof = async (key: Hex, vkHash: Hex, dataHash: Hex): Promise<GetConfigProofReturnType> => {
+    console.log(`----> getproof ${[key,
+        vkHash,
+        dataHash,]}`)
     const keyspaceProof = await KEYSPACE_CLIENT.getConfigProof({
         key,
         vkHash,

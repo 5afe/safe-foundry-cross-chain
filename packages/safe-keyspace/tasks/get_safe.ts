@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 import { formatEther, toHex } from "viem";
 import { getContractInstanceReadOnly } from "../common/utils";
 import { ABI } from "../common/artifacts"
-import { getValue } from "../test/helpers/keybase";
+import { getValue } from "../common/keybase";
 
 task("get_safe", "Get Safe details")
   .addParam("safe", "The Safe address")

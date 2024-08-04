@@ -3,29 +3,16 @@ import { expect } from 'chai'
 import execSafeTransaction from '../common/execSafeTransaction'
 import setup from './helpers/setup'
 import { decodeAbiParameters, encodeFunctionData, fromHex, parseAbiParameters, parseEther } from 'viem'
-import { getKeyspaceKey } from './helpers/keybase'
+import { getKeyspaceKey } from '../common/keybase'
 import execSafeKeySpaceTransaction from '../common/execSafeKeySpaceTransaction'
-import { extractPublicKeyFromWalletClient, getERC20Balance, getETHBalance } from '../common/utils'
+import { extractPublicKeyFromWalletClient, getERC20Balance, getETHBalance, getSafeInfo } from '../common/utils'
 
 const RECIPIENT_ADDR = "0x2Ac922ceC780521F8fFAb57D26B407936C352b82"
 
 describe('SafeKeySpaceModule', () => {
 
     it('Enables SafeKeySpace module on a Safe', async () => {
-        const { safe, module, owner, clients } = await loadFixture(setup)
-
-        // Enable KeyStoreModule as module on Safe
-        await execSafeTransaction({
-            safe,
-            to: safe.address,
-            data: encodeFunctionData({
-                abi: safe.abi,
-                functionName: 'enableModule',
-                args: [module.address]
-            }),
-            signer: owner,
-            clients
-        })
+        const { safe, module } = await loadFixture(setup)
 
         // Check if KeystoreModule is enabled
         expect(await safe.read.isModuleEnabled([module.address])).to.equal(true)
@@ -34,35 +21,9 @@ describe('SafeKeySpaceModule', () => {
     it('Registers a keystore to SafeKeySpace module', async () => {
         const { safe, module, guard, owner, clients } = await loadFixture(setup)
 
-        // Enable KeyStoreModule as module on Safe
-        await execSafeTransaction({
-            safe,
-            to: safe.address,
-            data: encodeFunctionData({
-                abi: safe.abi,
-                functionName: 'enableModule',
-                args: [module.address]
-            }),
-            signer: owner,
-            clients
-        })
-
-        // Register keystore on the Safe
+        // Check if a Keystore is registered and the nonce set to 0
         const publicKey = await extractPublicKeyFromWalletClient(owner)
         const keystoreKey = getKeyspaceKey(publicKey)
-        await execSafeTransaction({
-            safe,
-            to: module.address,
-            data: encodeFunctionData({
-                abi: module.abi,
-                functionName: 'registerKeystore',
-                args: [fromHex(keystoreKey, "bigint")]
-            }),
-            signer: owner,
-            clients
-        })
-
-        // Check if a Keystore is registered and the nonce set to 0
         expect(await module.read.keyspaceKeys([safe.address])).to.equal(fromHex(keystoreKey, "bigint"))
         expect(await module.read.nonces([safe.address])).to.equal(0)
 
@@ -71,41 +32,13 @@ describe('SafeKeySpaceModule', () => {
         const [guardVal] = decodeAbiParameters(parseAbiParameters('address'), guardStorage)
         expect(guardVal).to.equal(guard.address)
 
-        // Traditional safe.execTransaction should fail due to the guard
+        //Traditional safe.execTransaction should fail due to the guard
         await expect(execSafeTransaction({ safe, to: RECIPIENT_ADDR, value: parseEther("0.1"), data: "0x", signer: owner, clients }))
             .to.be.rejectedWith("This call is restricted, use SafeKeySpaceModule.execTransaction instead.");
     })
 
     it('Executes ETH transfer via SafeKeySpace module', async () => {
         const { safe, module, owner, clients } = await loadFixture(setup)
-
-        // Enable KeyStoreModule as module on Safe
-        await execSafeTransaction({
-            safe,
-            to: safe.address,
-            data: encodeFunctionData({
-                abi: safe.abi,
-                functionName: 'enableModule',
-                args: [module.address]
-            }),
-            signer: owner,
-            clients
-        })
-
-        // Register keystore on the Safe
-        const publicKey = await extractPublicKeyFromWalletClient(owner)
-        const keystoreKey = getKeyspaceKey(publicKey)
-        await execSafeTransaction({
-            safe,
-            to: module.address,
-            data: encodeFunctionData({
-                abi: module.abi,
-                functionName: 'registerKeystore',
-                args: [fromHex(keystoreKey, "bigint")]
-            }),
-            signer: owner,
-            clients
-        })
 
         // Execute a transaction through safeKeySpaceModule
         const amount = parseEther("0.1")
@@ -127,34 +60,6 @@ describe('SafeKeySpaceModule', () => {
 
     it('Executes ERC20 transfer via SafeKeySpace module', async () => {
         const { safe, module, owner, testToken, clients } = await loadFixture(setup)
-
-        // Enable KeyStoreModule as module on Safe
-        await execSafeTransaction({
-            safe,
-            to: safe.address,
-            data: encodeFunctionData({
-                abi: safe.abi,
-                functionName: 'enableModule',
-                args: [module.address]
-            }),
-            signer: owner,
-            clients
-        })
-
-        // Register keystore on the Safe
-        const publicKey = await extractPublicKeyFromWalletClient(owner)
-        const keystoreKey = getKeyspaceKey(publicKey)
-        await execSafeTransaction({
-            safe,
-            to: module.address,
-            data: encodeFunctionData({
-                abi: module.abi,
-                functionName: 'registerKeystore',
-                args: [fromHex(keystoreKey, "bigint")]
-            }),
-            signer: owner,
-            clients
-        })
 
         // Execute a transaction through safeKeySpaceModule
         const amount = 10n

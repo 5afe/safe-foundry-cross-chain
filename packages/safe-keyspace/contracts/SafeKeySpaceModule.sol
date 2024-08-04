@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "./interfaces/ISafe.sol";
+import "./interfaces/ISafeKeySpaceModule.sol";
 import "./interfaces/IKeyStore.sol";
 import "./interfaces/IVerifier.sol";
 import {Enum} from "@safe-global/safe-contracts/contracts/common/Enum.sol";
@@ -15,7 +16,7 @@ import "hardhat/console.sol";
  * @dev XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
  * @author Greg Jeanmart - @gjeanmart
  */
-contract SafeKeySpaceModule is Initializable {
+contract SafeKeySpaceModule is ISafeKeySpaceModule, Initializable {
     //// Constants
 
     //// States
@@ -75,16 +76,17 @@ contract SafeKeySpaceModule is Initializable {
      * @dev Registers a keystore for a given safe and set a guard to disable the local keystore
      * @param key Key in the Keystore
      */
+
     function registerKeystore(uint256 key) public {
         if (key == 0) revert InvalidKey(key);
 
         // Register the keystore
-        keyspaceKeys[msg.sender] = key;
+        keyspaceKeys[ msg.sender] = key;
 
         // Disable local keystore if a guard is provided
         if (
-            !ISafe(msg.sender).execTransactionFromModule({
-                to: msg.sender,
+            !ISafe( msg.sender).execTransactionFromModule({
+                to:  msg.sender,
                 value: 0,
                 data: abi.encodeWithSignature(
                     "setGuard(address)",

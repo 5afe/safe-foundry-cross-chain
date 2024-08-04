@@ -1,66 +1,64 @@
 
 import { task } from "hardhat/config";
-import deploySafeProxy from "../common/deploySafeProxy";
 import { encodeFunctionData, fromHex } from "viem";
-import execSafeTransaction from "../common/execSafeTransaction";
-import { extractPublicKeyFromWalletClient, getContractInstance, pkToWalletClient } from "../common/utils";
-import { getKeyspaceKey } from "../test/helpers/keybase";
-import { ABI } from "../common/artifacts"
+import { encodeMultiSend, extractPublicKeyFromWalletClient, pkToWalletClient } from "../common/utils";
+import { getKeyspaceKey } from "../common/keybase";
+import { ABI, ArtifactMultiSend } from "../common/artifacts"
+import { deploySafeProxy } from "../common/deploySafeProxy";
 
 task("deploy_safe", "Deploys a Safe proxy (single owner)")
-    .addParam("factory", "The factory address")
-    .addParam("mastercopy", "The masterCopy address")
-    .addParam("keystoremodule", "The SafeKeystore module address")
-    .addParam("ownerpk", "The owner private key")
-    .addParam("salt")
-    .setAction(async (taskArgs, hre) => {
-        await hre.run("compile");
+  .addParam("factory", "The factory address")
+  .addParam("mastercopy", "The masterCopy address")
+  .addParam("multisend", "The Multisend address")
+  .addParam("keystoremodule", "The SafeKeystore module address")
+  .addParam("keystoremodulesetup", "The SafeKeystore Module setup address")
+  .addParam("ownerpk", "The owner private key")
+  .addParam("salt")
+  .setAction(async (taskArgs, hre) => {
+    await hre.run("compile");
 
-        const readClient = await hre.viem.getPublicClient();
-        const [relayerClient] = await hre.viem.getWalletClients()
+    const readClient = await hre.viem.getPublicClient();
+    const [relayerClient] = await hre.viem.getWalletClients()
 
-        const owner = pkToWalletClient(readClient, taskArgs.ownerpk)
+    const owner = pkToWalletClient(readClient, taskArgs.ownerpk)
+    const publicKey = await extractPublicKeyFromWalletClient(owner)
+    const keystoreKey = getKeyspaceKey(publicKey)
 
-        const safe = await deploySafeProxy({
-            owners: [owner.account.address],
-            threshold: 1,
-            factory: taskArgs.factory,
-            mastercopy: taskArgs.mastercopy,
-            options: {
-                salt: taskArgs.salt
-            },
-            clients: { readClient, writeClient: relayerClient }
-        })
-        const module = getContractInstance(ABI.SafeKeySpaceModuleABI, taskArgs.keystoremodule, { readClient, writeClient: relayerClient })
+    const safe = await deploySafeProxy({
+      owners: [owner.account.address],
+      threshold: 1,
+      factory: taskArgs.factory,
+      mastercopy: taskArgs.mastercopy,
+      options: {
+        salt: taskArgs.salt,
+        callback: {
+          to: taskArgs.multisend,
+          data: encodeFunctionData({
+            abi: ArtifactMultiSend.abi,
+            functionName: 'multiSend',
+            args: [encodeMultiSend([
+              {
+                to: taskArgs.keystoremodulesetup,
+                data: encodeFunctionData({
+                  abi: ABI.SafeKeySpaceModuleSetupABI,
+                  functionName: 'enableModule',
+                  args: [taskArgs.keystoremodule]
+                }),
+              },
+              {
+                to: taskArgs.keystoremodulesetup,
+                data: encodeFunctionData({
+                  abi: ABI.SafeKeySpaceModuleSetupABI,
+                  functionName: 'configureModule',
+                  args: [taskArgs.keystoremodule, fromHex(keystoreKey, "bigint")],
+                }),
+              }
+            ])]
+          }),
+        }
+      },
+      clients: { readClient, writeClient: relayerClient }
+    })
 
-        // Enable KeyStoreModule as module on Safe
-        await execSafeTransaction({
-            safe,
-            to: safe.address,
-            data: encodeFunctionData({
-                abi: safe.abi,
-                functionName: 'enableModule',
-                args: [module.address]
-            }),
-            signer: owner,
-            clients: { readClient, writeClient: relayerClient }
-        })
-
-        // Register keystore on the Safe
-        const publicKey = await extractPublicKeyFromWalletClient(owner)
-        const keystoreKey = getKeyspaceKey(publicKey)
-
-        await execSafeTransaction({
-            safe,
-            to: module.address,
-            data: encodeFunctionData({
-                abi: module.abi,
-                functionName: 'registerKeystore',
-                args: [fromHex(keystoreKey, "bigint")]
-            }),
-            signer: owner,
-            clients: { readClient, writeClient: relayerClient }
-        })
-
-        await hre.run("get_safe", { safe: safe.address });
-    });
+    await hre.run("get_safe", { safe: safe.address });
+  });

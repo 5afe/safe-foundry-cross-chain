@@ -10,8 +10,12 @@ import ArtifactSimulateTxAccessor from '@safe-global//safe-contracts/build/artif
 
 import { ISafe$Type } from "../artifacts/contracts/interfaces/ISafe.sol/ISafe";
 import ISafe from "../artifacts/contracts/interfaces/ISafe.sol/ISafe.json";
+
 import { SafeKeySpaceModule$Type } from "../artifacts/contracts/SafeKeySpaceModule.sol/SafeKeySpaceModule";
 import SafeKeySpaceModule from "../artifacts/contracts/SafeKeySpaceModule.sol/SafeKeySpaceModule.json";
+
+import { SafeKeySpaceModuleSetup$Type } from '../artifacts/contracts/SafeKeySpaceModuleSetup.sol/SafeKeySpaceModuleSetup'
+import SafeKeySpaceModuleSetup from '../artifacts/contracts/SafeKeySpaceModuleSetup.sol/SafeKeySpaceModuleSetup.json'
 
 import { MockedKeystore$Type } from "../artifacts/contracts/test/MockedKeystore.sol/MockedKeystore";
 import MockedKeystore from "../artifacts/contracts/test/MockedKeystore.sol/MockedKeystore.json";
@@ -32,8 +36,9 @@ export {
 }
 
 export const ABI = {
-    ISafeABI: <ISafe$Type["abi"]> ISafe.abi,
-    SafeKeySpaceModuleABI: <SafeKeySpaceModule$Type["abi"]> SafeKeySpaceModule.abi,
-    MockedKeystoreABI: <MockedKeystore$Type["abi"]> MockedKeystore.abi,
-    TestTokenABI: <TestToken$Type["abi"]> TestToken.abi
+    ISafeABI: <ISafe$Type["abi"]>ISafe.abi,
+    SafeKeySpaceModuleSetupABI: <SafeKeySpaceModuleSetup$Type["abi"]>SafeKeySpaceModuleSetup.abi,
+    SafeKeySpaceModuleABI: <SafeKeySpaceModule$Type["abi"]>SafeKeySpaceModule.abi,
+    MockedKeystoreABI: <MockedKeystore$Type["abi"]>MockedKeystore.abi,
+    TestTokenABI: <TestToken$Type["abi"]>TestToken.abi
 }

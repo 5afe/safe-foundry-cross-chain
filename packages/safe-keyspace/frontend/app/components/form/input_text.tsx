@@ -12,37 +12,49 @@ function InputText(
         label,
         placeholder,
         field,
+        classes,
+        button,
         onChange,
     }: {
         label?: string,
         placeholder?: string,
         field: InputField,
+        classes?: string,
+        button?: { label: React.ReactNode, onClick: () => void, disabled?: boolean }
         onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void,
     }) {
-    return <div className="flex flex-wrap mb-6">
-        <div className="w-full">
-            {label ?
-                <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
-                    {label}
-                </label>
-                :
-                <div className="h-6"></div>}
+    return <label className="form-control w-full max-w-xs ">
+        <div className="label">
+            <span className="label-text">{label ? label : " "}</span>
         </div>
+        <div className="w-full">
+            <div className="join w-full">
+                <input
+                    type="text"
+                    placeholder={placeholder}
+                    value={field.value}
+                    disabled={field.disabled}
+                    onChange={onChange}
+                    className={`${classes} ${field.hasError ? "input-error" : ""} ${button ? "join-item" : ""} input input-bordered w-full max-w-xs `} />
 
-        <input
-            className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2 disabled:bg-slate-200 
-                        ${(field.hasError && "border-red-500")}`}
-            type="text"
-            placeholder={placeholder}
-            value={field.value}
-            disabled={field.disabled}
-            onChange={onChange} />
+                {button &&
+                    <button
+                        type="button"
+                        className="btn join-item rounded-r-full"
+                        onClick={() => button.onClick()}
+                        disabled={button.disabled}>
+                        {button.label}
+                    </button>}
+            </div>
+        </div>
         {field.message &&
-            <p className={`text-gray-600 text-xs ${(field.hasError && "text-red-500")}`}>
-                {field.message}
-            </p>}
-
-    </div>
+            <div className="label">
+                <span className={`label-text-alt text-gray-600 text-xs ${(field.hasError && "text-red-500")}`}>
+                    {field.message}
+                </span>
+            </div>
+        }
+    </label>
 }
 
 export default InputText

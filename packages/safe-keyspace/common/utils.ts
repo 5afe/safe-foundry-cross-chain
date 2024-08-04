@@ -1,12 +1,13 @@
 
 
-import { Abi, Account, Address, Chain, Client, Hex, WalletClient, Signature, Transport, bytesToHex, createWalletClient, encodePacked, fromHex, getAddress, getContract, hashMessage, http, recoverPublicKey, toHex } from 'viem'
+import { Abi, Account, Address, Chain, Client, Hex, WalletClient, Signature, Transport, bytesToHex, createWalletClient, encodePacked, fromHex, getAddress, getContract, hashMessage, http, recoverPublicKey, toHex, size } from 'viem'
 import { BrowserProvider, JsonRpcSigner } from "ethers"
 import { secp256k1 } from "@noble/curves/secp256k1"
 import { privateKeyToAccount } from 'viem/accounts'
 import { TestToken$Type } from '../artifacts/contracts/test/TestToken.sol/TestToken'
 import { ABI } from './artifacts'
 import { Clients, ContractInstance, ContractInstanceReadOnly, PublicKeyPoints, ReadClient, WriteClient } from './types'
+import { getValue } from './keybase'
 
 export const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000" as Hex
 export const ZERO_ADDRESS = getAddress("0x0000000000000000000000000000000000000000")
@@ -137,6 +138,19 @@ export const getSafeInfo = async (client: ReadClient, address: Address) => {
         client.getBalance({ address })
     ])
 
+    const module = getContractInstanceReadOnly(ABI.SafeKeySpaceModuleABI, modules[0], client)
+    const [keyspaceKey, keyspaceKeyNonce, keystoreAddr] = await Promise.all([
+        module.read.keyspaceKeys([address]),
+        module.read.nonces([address]),
+        module.read.keyStore()
+    ])
+
+    const keystore = getContractInstanceReadOnly(ABI.MockedKeystoreABI, keystoreAddr, client)
+    const [keyspaceValue, keystoreRoot] = await Promise.all([
+        getValue(toHex(keyspaceKey)),
+        keystore.read.root()
+    ])
+
     return {
         address,
         version,
@@ -145,5 +159,28 @@ export const getSafeInfo = async (client: ReadClient, address: Address) => {
         nonce,
         modules,
         balance,
+        keyspaceKey: toHex(keyspaceKey),
+        keyspaceKeyNonce,
+        keystoreAddr,
+        keyspaceValue: keyspaceValue as unknown as Hex,
+        keystoreRoot
     }
+}
+
+const encodeMultiSendTx = (tx: { to: Address, value?: bigint, data?: Hex, operation?: number }): string => {
+    const encoded = encodePacked(
+        ['uint8', 'address', 'uint256', 'uint256', 'bytes'],
+        [
+            tx.operation || 1,
+            tx.to,
+            tx.value || 0n,
+            BigInt(size(tx.data || "0x")),
+            tx.data || "0x",
+        ]
+    )
+    return encoded.slice(2)
+}
+
+export const encodeMultiSend = (txs: { to: Address, value?: bigint, data?: Hex, operation?: number }[]): Hex => {
+    return '0x' + txs.map((tx) => encodeMultiSendTx(tx)).join('') as Hex
 }

@@ -1,10 +1,10 @@
 import { Address } from "viem";
 import { SafeInfo } from "./interfaces";
 import { getSafeInfo } from "../../../common/utils"
-import config from "./config";
+import { ReadClient } from "../../../common/types";
 
-export const readSafe = async (address: Address): Promise<SafeInfo> => {
-    const safe = await getSafeInfo(config.publicClient, address)
+export const readSafe = async (client: ReadClient, address: Address): Promise<SafeInfo> => {
+    const safe = await getSafeInfo(client, address)
 
     return safe
 }

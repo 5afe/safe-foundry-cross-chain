@@ -5,11 +5,13 @@ function Button(
         label,
         text,
         disabled,
+        classes,
         onClick,
     }: {
         label?: string,
-        text: string,
-        disabled?: boolean
+        text: React.ReactNode,
+        disabled?: boolean,
+        classes?: string,
         onClick?: () => void,
     }) {
     return <div className="flex flex-wrap mb-6">
@@ -23,7 +25,7 @@ function Button(
         </div>
 
         <button
-            className="w-[180px] shadow bg-blue-500 hover:bg-blue-400 focus:shadow-outline focus:outline-none text-white py-2 px-4 rounded text-xs h-[38px] disabled:bg-blue-200"
+            className={`btn ${classes}`}
             type="button"
             disabled={disabled}
             onClick={onClick}>

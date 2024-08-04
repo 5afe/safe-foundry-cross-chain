@@ -1,5 +1,5 @@
 
-import { VK_HASH, getDataHash, getProof } from '../test/helpers/keybase'
+import { VK_HASH, getDataHash, getProof } from './keybase'
 import { Address, Hex, fromHex, toHex } from 'viem'
 import { extractPublicKeyFromWalletClient, waitForTransaction } from './utils'
 import { SafeKeySpaceModule$Type } from '../artifacts/contracts/SafeKeySpaceModule.sol/SafeKeySpaceModule'

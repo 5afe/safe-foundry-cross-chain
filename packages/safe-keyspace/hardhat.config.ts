@@ -1,13 +1,19 @@
 import { HardhatUserConfig, vars } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
 import "@nomicfoundation/hardhat-verify";
-import "./tasks/deploy_safe"
-import "./tasks/deploy_singletons"
-import "./tasks/send_eth"
-import "./tasks/exec_safe_tx_keystore"
-import "./tasks/get_safe"
-import "./tasks/change_keystore_owner"
-import "./tasks/set_keystore_root"
+import fs from "fs";
+import path from "path";
+
+const artifactsPath = path.join(__dirname, "artifacts");
+if (fs.existsSync(artifactsPath)) {
+  require("./tasks/deploy_safe")
+  require("./tasks/deploy_singletons")
+  require("./tasks/send_eth")
+  require("./tasks/exec_safe_tx_keystore")
+  require("./tasks/get_safe")
+  require("./tasks/change_keystore_owner")
+  require("./tasks/set_keystore_root")
+}
 
 const SOLIDITY_VERSION = "0.8.24"
 const REPORT_GAS = true
@@ -18,12 +24,14 @@ const SEPOLIA_DEPLOYER_KEY = vars.get("SEPOLIA_DEPLOYER_KEY")
 const SEPOLIA_ETHERSCAN_API_KEY = vars.get("SEPOLIA_ETHERSCAN_API_KEY")
 const BASE_SEPOLIA_DEPLOYER_KEY = vars.get("BASE_SEPOLIA_DEPLOYER_KEY")
 const BASE_SEPOLIA_ETHERSCAN_API_KEY = vars.get("BASE_SEPOLIA_ETHERSCAN_API_KEY")
+const OP_SEPOLIA_DEPLOYER_KEY = vars.get("OP_SEPOLIA_DEPLOYER_KEY")
+const OP_SEPOLIA_ETHERSCAN_API_KEY = vars.get("OP_SEPOLIA_ETHERSCAN_API_KEY")
 
 
 const config: HardhatUserConfig = {
   solidity: {
     version: SOLIDITY_VERSION,
-    settings: { 
+    settings: {
       optimizer: {
         enabled: true,
         runs: 200
@@ -49,6 +57,10 @@ const config: HardhatUserConfig = {
       url: `https://sepolia.base.org`,
       accounts: [BASE_SEPOLIA_DEPLOYER_KEY],
     },
+    op_sepolia: {
+      url: `https://sepolia.optimism.io`,
+      accounts: [OP_SEPOLIA_DEPLOYER_KEY],
+    },
   },
   gasReporter: {
     enabled: Boolean(REPORT_GAS),
@@ -58,8 +70,9 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      sepolia: SEPOLIA_ETHERSCAN_API_KEY, 
-      base_sepolia: BASE_SEPOLIA_ETHERSCAN_API_KEY
+      sepolia: SEPOLIA_ETHERSCAN_API_KEY,
+      base_sepolia: BASE_SEPOLIA_ETHERSCAN_API_KEY,
+      op_sepolia: OP_SEPOLIA_ETHERSCAN_API_KEY
     },
     customChains: [
       {
@@ -74,7 +87,14 @@ const config: HardhatUserConfig = {
         chainId: 84532,
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org/"
+          browserURL: "https://sepolia.basescan.org"
+        }
+      }, {
+        network: "op_sepolia",
+        chainId: 11155420,
+        urls: {
+          apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io"
         }
       }
     ]
