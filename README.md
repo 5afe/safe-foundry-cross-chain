@@ -15,7 +15,7 @@ This Module can optionally set a guard to prevent `safe(L2)` to use its local ke
 It leverages a precompiled contract called `l1sload` to load a storage slot on the L1 chain (see [L1SLOAD spec](https://scrollzkp.notion.site/L1SLOAD-spec-a12ae185503946da9e660869345ef7dc)).
 
 
-### [Safe x KeySpace](./packages/safe-keyspace/) `[WIP]`
+### [Safe x KeySpace](./packages/safe-keyspace/)
 
 - **In collaboration with**: [KeySpace](https://docs.key.space)
 - **Keywords**: `#keystore`
@@ -26,6 +26,6 @@ PoC integrating [KeySpace](https://docs.key.space/) to Safe SmartAccount to prov
 ### [Safe x Klaster](./packages/safe-klaster/) `[WIP]`
 
 - **In collaboration with**: [Klaster](https://klaster.io)
-- **Keywords**: `#keystore`
+- **Keywords**: 
 - **Description**:
 [TO COMPLETE]
