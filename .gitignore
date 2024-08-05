@@ -39,6 +39,7 @@ ignition/deployments/chain-31337
 .DS_Store
 .vscode
 *.pem
+.vscode/
 
 # debug
 npm-debug.log*
