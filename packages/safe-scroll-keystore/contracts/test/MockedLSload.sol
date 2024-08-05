@@ -15,7 +15,7 @@ contract MockedL1Sload {
         return refs[contractAddr][slot];
     }
 
-    // decode packaed data
+    // decode packed data
     function decodeData(
         bytes memory data
     ) internal pure returns (address, uint256) {
