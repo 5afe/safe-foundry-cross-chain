@@ -1,4 +1,5 @@
 {
+  "name": "@safe-labs-cross-chain/safe-keyspace",
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^0.15.0",
     "@nomicfoundation/hardhat-ignition-viem": "^0.15.0",

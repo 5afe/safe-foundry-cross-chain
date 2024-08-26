@@ -1,0 +1,26 @@
+{
+  "name": "@safe-labs-cross-chain/safe-klaster",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition": "^0.15.5",
+    "@nomicfoundation/hardhat-ignition-viem": "^0.15.5",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.11",
+    "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.9",
+    "@nomicfoundation/hardhat-viem": "^2.0.3",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@safe-global/safe-contracts": "^1.4.1-build.0",
+    "@safe-global/safe-singleton-factory": "^1.0.31",
+    "@types/chai": "^4.3.17",
+    "@types/chai-as-promised": "^7.1.8",
+    "@types/mocha": "^10.0.7",
+    "@types/node": "^22.1.0",
+    "chai": "^4.2.0",
+    "hardhat": "^2.22.7",
+    "hardhat-gas-reporter": "^2.2.0",
+    "klaster-sdk": "0.5.2",
+    "solidity-coverage": "^0.8.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4",
+    "viem": "^2.18.8"
+  }
+}
