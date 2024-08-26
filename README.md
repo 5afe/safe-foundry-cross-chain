@@ -1,5 +1,5 @@
 
-# Safe{Labs} Cross-Chain
+# Safe{Foundry} Cross-Chain
 
 We are building the best Cross-Chain experience with chain-abstraction protocols.
 
