@@ -1687,16 +1687,7 @@ axe-core@^4.9.1:
   resolved "https://registry.yarnpkg.com/axe-core/-/axe-core-4.10.0.tgz#d9e56ab0147278272739a000880196cdfe113b59"
   integrity sha512-Mr2ZakwQ7XUAjp7pAwQWRhhK8mQQ6JAaNWSjmjxil0R8BPioMtQsTLOolGYkji1rcL++3dCqZA3zWqpT+9Ew6g==
 
-axios@1.7.2:
-  version "1.7.2"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.2.tgz#b625db8a7051fbea61c35a3cbb3a1daa7b9c7621"
-  integrity sha512-2A8QhOMrbomlDuiLeK9XibIBzuHeRcqqNOHp0Cyp5EoJ1IFDh+XZH3A6BkXtv0K4gFGCI0Y4BM7B1wOEi0Rmgw==
-  dependencies:
-    follow-redirects "^1.15.6"
-    form-data "^4.0.0"
-    proxy-from-env "^1.1.0"
-
-axios@^1.7.5:
+axios@1.7.5, axios@^1.7.5:
   version "1.7.5"
   resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.5.tgz#21eed340eb5daf47d29b6e002424b3e88c8c54b1"
   integrity sha512-fZu86yCo+svH3uqJ/yTdQ0QHpQu5oL+/QE+QPSv6BZSkDAoky9vytxp7u5qk83OJFS3kEBcesWni9WTZAv3tSw==
@@ -3763,13 +3754,13 @@ keyvaluestorage-interface@^1.0.0:
   resolved "https://registry.yarnpkg.com/keyvaluestorage-interface/-/keyvaluestorage-interface-1.0.0.tgz#13ebdf71f5284ad54be94bd1ad9ed79adad515ff"
   integrity sha512-8t6Q3TclQ4uZynJY9IGr2+SsIGwK9JHcO6ootkHCGA0CrQCRy+VkouYNO2xicET6b9al7QKzpebNow+gkpCL8g==
 
-klaster-sdk@^0.5.3:
-  version "0.5.3"
-  resolved "https://registry.yarnpkg.com/klaster-sdk/-/klaster-sdk-0.5.3.tgz#abe23588ec80f85bdf286f4f0cadea2261410042"
-  integrity sha512-5avgE/22oqx8PsmoNc7fjhWhdUrZ/S3hGIRfUJqMUiQlTkMvUn3Oai//qW2GMv2biazfU4gdLiYxruJN5LB7Ag==
+klaster-sdk@^0.5.9:
+  version "0.5.9"
+  resolved "https://registry.yarnpkg.com/klaster-sdk/-/klaster-sdk-0.5.9.tgz#d90f6ffaba3915a50e9009966a9719e9356f1e11"
+  integrity sha512-yc69l/kGAhTmdp92zLQmSVnObhjQ0SdFyL8lP90JoYDeqx1/qXxwSKjqX5w4L+yrx+yDA/ehMB1RYzBdVLBPYw==
   dependencies:
     "@wagmi/core" "2.12.2"
-    axios "1.7.2"
+    axios "1.7.5"
     lodash "^4.17.21"
     viem "2.18.4"
 

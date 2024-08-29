@@ -2,27 +2,22 @@ import axios from "axios";
 import { Address, batchTx, BridgePlugin, BridgePluginParams, encodeApproveTx, rawTx } from "klaster-sdk";
 import { encodeFunctionData, parseAbi } from "viem";
 
+const BASE_URL = "https://testnet.across.to/api/"
+const client = axios.create({
+    baseURL: BASE_URL
+})
+
 async function getAcrossSuggestedFees(
     data: BridgePluginParams
 ) {
-    console.log(`getAcrossSuggestedFees`)
-    const client = axios.create({
-        baseURL: 'https://testnet.across.to/api/'
-    })
-
-    console.log(`URL = https://testnet.across.to/api/` +
+    console.log(`getAcrossSuggestedFees :: URL = ${BASE_URL}` +
         `suggested-fees?inputToken=${data.sourceToken}&outputToken=${data.destinationToken}&` +
         `originChainId=${data.sourceChainId}&destinationChainId=${data.destinationChainId}&amount=${data.amount}`
     )
-
     const res = await client.get<RelayFeeResponse>(
         `suggested-fees?inputToken=${data.sourceToken}&outputToken=${data.destinationToken}&` +
         `originChainId=${data.sourceChainId}&destinationChainId=${data.destinationChainId}&amount=${data.amount}`
     )
-
-
-    console.log(`result = ${JSON.stringify(res.data)}`)
-
     return res.data
 }
 
@@ -57,9 +52,16 @@ function encodeAcrossCallData(data: BridgePluginParams, fees: RelayFeeResponse) 
 
 }
 
-export const acrossBridgePlugin: BridgePlugin = async (data: BridgePluginParams) => {
-    console.log(`=>>> acrossBridgePlugin`)
+export const getAvailableRoutes = async () => {
+    // https://testnet.across.to/api/available-routes
 
+    console.log(`getAcrossSuggestedFees :: URL = ${BASE_URL}/api/available-routes`
+    )
+    const res = await client.get<RouteResponse[]>(`/api/available-routes`)
+    return res.data
+}
+
+export const acrossBridgePlugin: BridgePlugin = async (data: BridgePluginParams) => {
     const feesResponse = await getAcrossSuggestedFees(data)
     const outputAmount = data.amount - BigInt(feesResponse.totalRelayFee.total);
 
@@ -74,7 +76,7 @@ export const acrossBridgePlugin: BridgePlugin = async (data: BridgePluginParams)
     const acrossCallTx = rawTx({
         to: feesResponse.spokePoolAddress,
         data: encodeAcrossCallData(data, feesResponse),
-        gasLimit: BigInt(250000)
+        gasLimit: BigInt(300000)
     })
 
     return {
@@ -84,6 +86,14 @@ export const acrossBridgePlugin: BridgePlugin = async (data: BridgePluginParams)
 
 };
 
+interface RouteResponse {
+    originChainId: number,
+    originToken: Address,
+    destinationChainId: number,
+    destinationToken: Address,
+    originTokenSymbol: string,
+    destinationTokenSymbol: string
+}
 
 interface FeeObject {
     pct: string;

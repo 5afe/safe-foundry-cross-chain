@@ -2,13 +2,13 @@
 import { Address, encodeFunctionData, erc20Abi, formatUnits, getAddress, Hex, isAddress, parseUnits } from "viem";
 import { useEffect, useState } from "react";
 import { useAccountEffect, useWalletClient } from "wagmi";
-import { baseSepolia, sepolia } from "wagmi/chains";
+import { arbitrumSepolia, baseSepolia, optimismSepolia, sepolia } from "wagmi/chains";
 import { ConnectButton, Chain } from "@rainbow-me/rainbowkit";
 import { Badge, Spinner } from "flowbite-react";
 import Button from "../components/button";
 import { acrossBridgePlugin } from "../../../common/across-bridge-plugin";
 import { WriteClient } from "../../../common/types";
-import { KlasterSDK, SafeV141AccountInitData, MultichainClient, MultichainTokenMapping, initKlaster, loadSafeV141Account, klasterNodeHost, buildMultichainReadonlyClient, buildRpcInfo, buildTokenMapping, deployment, UnifiedBalanceResult, encodeBridgingOps, buildItx, rawTx, getTokenAddressForChainId, singleTx } from "klaster-sdk";
+import { KlasterSDK, SafeV141AccountInitData, MultichainClient, MultichainTokenMapping, initKlaster, loadSafeV141Account, klasterNodeHost, buildMultichainReadonlyClient, buildRpcInfo, buildTokenMapping, deployment, UnifiedBalanceResult, encodeBridgingOps, buildItx, rawTx, getTokenAddressForChainId, singleTx, QuoteResponse } from "klaster-sdk";
 import InputText, { InputField } from "../components/input_text";
 import { isFloat, isInt } from "../utils/number";
 import { formatHex } from "../utils/hex";
@@ -27,17 +27,20 @@ type ChainInfo = {
 type KlasterInfo = {
     klaster: KlasterSDK<SafeV141AccountInitData>;
     mcClient: MultichainClient;
-    mUSDC: MultichainTokenMapping;
+    tokenMappings: {
+        mUSDC: MultichainTokenMapping
+    };
     safeAddr: Address
 }
 
 type TxInfo = {
-    status: "IN_PROGRESS" | "SUCCESS" | "FAILED",
+    status: "INIT" | "FETCHING_QUOTE" | "READY_TO_EXECUTE" | "EXECUTING" | "SUCCESS" | "FAILED",
     sourceChain: number,
     targetChain: number,
     to: Address,
     amount: bigint,
     error?: string,
+    quote?: QuoteResponse,
     hash?: string
 }
 
@@ -49,12 +52,22 @@ const CHAINS: ChainInfo = {
     [sepolia.id]: {
         id: sepolia.id,
         chain: sepolia,
-        usdc: getAddress("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"),
+        usdc: getAddress("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238")
     },
     [baseSepolia.id]: {
         id: baseSepolia.id,
         chain: baseSepolia,
         usdc: getAddress("0x036CbD53842c5426634e7929541eC2318f3dCF7e")
+    },
+    [optimismSepolia.id]: {
+        id: optimismSepolia.id,
+        chain: optimismSepolia,
+        usdc: getAddress("0x5fd84259d66Cd46123540766Be93DFE6D43130D7")
+    },
+    [arbitrumSepolia.id]: {
+        id: arbitrumSepolia.id,
+        chain: arbitrumSepolia,
+        usdc: getAddress("0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d")
     }
 }
 
@@ -73,39 +86,53 @@ const loadKlasterInstance = async (signerAddr: Address): Promise<KlasterInfo> =>
         Object.values(CHAINS).map(c => buildRpcInfo(c.id, c.chain.rpcUrls.default.http[0]))
     );
 
-    const mUSDC = buildTokenMapping(
-        Object.values(CHAINS).map(c => deployment(c.id, c.usdc))
-    )
+    const tokenMappings = {
+        mUSDC: buildTokenMapping(
+            Object.values(CHAINS).map(c => deployment(c.id, c.usdc))
+        )
+    }
 
     return {
         klaster,
         mcClient,
-        mUSDC,
+        tokenMappings,
         safeAddr: klaster.account.getAddress(sepolia.id) as Address
     }
 }
 
-const loadUnifiedBalance = async ({ klaster, mcClient, mUSDC, safeAddr }: KlasterInfo): Promise<UnifiedBalanceResult> => {
+const loadUnifiedBalance = async ({ klaster, mcClient, tokenMappings, safeAddr }: KlasterInfo): Promise<UnifiedBalanceResult> => {
     console.log(`loadUnifiedBalance(safeAddr: ${safeAddr})`)
-    const uBalance = await mcClient.getUnifiedErc20Balance({
-        tokenMapping: mUSDC,
+    const usdcBalance = await mcClient.getUnifiedErc20Balance({
+        tokenMapping: tokenMappings.mUSDC,
         account: klaster.account
     })
-    return uBalance
+    console.log(`====> usdcBalance`)
+    console.log(usdcBalance)
+
+    const ethBalance = await mcClient.getUnifiedNativeBalance({
+        account: klaster.account
+    })
+    console.log(`====> ethBalance`)
+    console.log(ethBalance)
+    return usdcBalance
 }
 
-const bridgeFund = async (
-    { klaster, mcClient, mUSDC }: KlasterInfo,
+const quote = async (
+    { klaster, mcClient, tokenMappings }: KlasterInfo,
     unifiedBalance: UnifiedBalanceResult,
-    signer: WriteClient,
     txInfo: TxInfo,
     setTxInfo: (txInfo: TxInfo) => void
 ): Promise<void> => {
-    console.log(`===> bridgeFund`)
+    console.log(`===> fetch quote`)
+
+    setTxInfo({
+        ...txInfo,
+        status: "FETCHING_QUOTE"
+    })
 
     try {
         const bridgingOps = await encodeBridgingOps({
-            tokenMapping: mUSDC,
+            tokenMapping: tokenMappings.mUSDC,
             account: klaster.account,
             amount: txInfo.amount,
             bridgePlugin: acrossBridgePlugin,
@@ -116,10 +143,10 @@ const bridgeFund = async (
         console.log(`====> bridgingOps`)
         console.log(bridgingOps)
 
-        const destChainTokenAddress = getTokenAddressForChainId(mUSDC, txInfo.targetChain)!
+        const destChainTokenAddress = getTokenAddressForChainId(tokenMappings.mUSDC, txInfo.targetChain)!
 
         const sendERC20Op = rawTx({
-            gasLimit: 100000n,
+            gasLimit: 200000n,
             to: destChainTokenAddress,
             data: encodeFunctionData({
                 abi: erc20Abi,
@@ -133,9 +160,9 @@ const bridgeFund = async (
 
         const iTx = buildItx({
             steps: bridgingOps.steps
-            // .concat(
-            //     singleTx(txInfo.targetChain, sendERC20Op)
-            // )
+                .concat(
+                    singleTx(txInfo.targetChain, sendERC20Op)
+                )
             ,
             feeTx: klaster.encodePaymentFee(sepolia.id, 'USDC')
         })
@@ -147,20 +174,70 @@ const bridgeFund = async (
         console.log(`====> quote`)
         console.log(quote)
 
+        setTxInfo({
+            ...txInfo,
+            status: "READY_TO_EXECUTE",
+            quote
+        })
+
+    } catch (e) {
+        console.log(`====> ERROR: ${e}`)
+        setTxInfo({
+            ...txInfo,
+            status: "READY_TO_EXECUTE",
+            error: (e as Error).message
+        })
+    }
+}
+
+const execute = async (
+    { klaster }: KlasterInfo,
+    unifiedBalance: UnifiedBalanceResult,
+    signer: WriteClient,
+    txInfo: TxInfo,
+    setTxInfo: (txInfo: TxInfo) => void
+): Promise<void> => {
+    console.log(`===> execute`)
+
+    setTxInfo({
+        ...txInfo,
+        status: "EXECUTING"
+    })
+
+    if (!txInfo.quote) {
+        setTxInfo({
+            ...txInfo,
+            status: "FAILED",
+            error: "No quote available"
+        })
+        return;
+    }
+
+    // TODO include amount to send as well
+    if(txInfo.quote.paymentInfo.tokenWeiAmount > unifiedBalance.breakdown.filter(c=>c.chainId === txInfo.sourceChain)[0].amount) {
+        setTxInfo({
+            ...txInfo,
+            status: "FAILED",
+            error: "No enough funds to cover the fee"
+        })
+        return;
+    }
+
+    try {
         // Sign the quote (implement this based on your signing method)
         console.log(`====> sign (signer = ${signer.account.address})`)
-        const signed = await signer.signMessage({ message: { raw: quote.itxHash } });
+        const signed = await signer.signMessage({ message: { raw: txInfo.quote.itxHash } });
         console.log(`====> signed`)
         console.log(signed)
 
         // Execute the transaction
-        const result = await klaster.execute(quote, signed);
+        const result = await klaster.execute(txInfo.quote, signed);
         console.log(`====> result`)
         console.log(result)
 
         setTxInfo({
             ...txInfo,
-            status: "SUCCESS",
+            status: "READY_TO_EXECUTE",
             hash: result.itxHash
         })
 
@@ -168,7 +245,7 @@ const bridgeFund = async (
         console.log(`====> ERROR: ${e}`)
         setTxInfo({
             ...txInfo,
-            status: "FAILED",
+            status: "READY_TO_EXECUTE",
             error: (e as Error).message
         })
     }
@@ -289,7 +366,7 @@ function Connect() {
                                                 }
                                                 setToField({ value: to, hasError: false, message: "" })
                                             }} />
-                                            
+
                                         <InputText
                                             label="Amount"
                                             placeholder="0.1"
@@ -307,28 +384,57 @@ function Connect() {
                                                 setAmountField({ value: amount, hasError: false, message: "" })
                                             }} />
 
-                                        <Button
-                                            text="Bridge USDC to Base Sepolia"
-                                            className="w-full"
-                                            disabled={false}
-                                            isLoading={txInfo?.status === "IN_PROGRESS"}
-                                            onClick={async () => {
-                                                const txInfo: TxInfo = {
-                                                    status: "IN_PROGRESS",
-                                                    sourceChain: sepolia.id,
-                                                    targetChain: baseSepolia.id,
-                                                    to: toField.value as Address,
-                                                    amount: parseUnits(amountField.value, klasterUnifiedBalance.decimals),
-                                                }
-                                                setTxInfo(txInfo)
-                                                await bridgeFund(
-                                                    klasterInfo,
-                                                    klasterUnifiedBalance,
-                                                    signer as WriteClient,
-                                                    txInfo,
-                                                    setTxInfo)
-                                            }}
-                                        />
+                                        {(!txInfo?.status || txInfo?.status === "INIT" || txInfo?.status === "FETCHING_QUOTE") &&
+                                            <Button
+                                                text="Request quote to bridge USDC to Base Sepolia"
+                                                className="w-full"
+                                                disabled={false}
+                                                isLoading={txInfo?.status === "FETCHING_QUOTE"}
+                                                onClick={async () => {
+                                                    const txInfo: TxInfo = {
+                                                        status: "INIT",
+                                                        sourceChain: sepolia.id, //baseSepolia.id,
+                                                        targetChain: baseSepolia.id, //arbitrumSepolia.id,
+                                                        to: toField.value as Address,
+                                                        amount: parseUnits(amountField.value, klasterUnifiedBalance.decimals),
+                                                        quote: undefined,
+                                                        error: undefined,
+                                                        hash: undefined
+                                                    }
+                                                    setTxInfo(txInfo)
+                                                    await quote(
+                                                        klasterInfo,
+                                                        klasterUnifiedBalance,
+                                                        txInfo,
+                                                        setTxInfo)
+                                                }}
+                                            />
+                                        }
+
+                                        {(txInfo?.status === "READY_TO_EXECUTE" || txInfo?.status === "EXECUTING") &&
+                                            <div>
+                                                <p>
+                                                    <span className="flex flex-row gap-2 items-center my-4">
+                                                        Quote {txInfo.quote?.paymentInfo.tokenValue} <Badge>USDC</Badge>
+                                                    </span>
+                                                </p>
+                                                <Button
+                                                    text="Execute bridge USDC to Base Sepolia"
+                                                    className="w-full"
+                                                    disabled={false}
+                                                    isLoading={txInfo?.status === "EXECUTING"}
+                                                    onClick={async () => {
+                                                        await execute(
+                                                            klasterInfo,
+                                                            klasterUnifiedBalance,
+                                                            signer as WriteClient,
+                                                            txInfo,
+                                                            setTxInfo)
+                                                    }}
+                                                />
+                                            </div>
+                                        }
+
                                         {txInfo?.error &&
                                             <div>
                                                 <span className="text-xs text-red-500">
