@@ -210,15 +210,15 @@ contract SafeRemoteKeystoreModule is Initializable {
         bytes memory signatures,
         uint256 requiredSignatures,
         address[] memory owners
-    ) internal pure {
+    ) internal view {
         // Check that the provided signature data is not too short
         if (signatures.length < requiredSignatures * 65)
             revert InvalidSignatureCount();
 
         for (uint256 i = 0; i < requiredSignatures; i++) {
             (uint8 v, bytes32 r, bytes32 s) = signatureSplit(signatures, i);
-
-            if (v = 0) {
+            address currentOwner;
+            if (v == 0) {
                 // require(keccak256(data) == dataHash, "GS027");
                 // If v is 0 then it is a contract signature
                 // When handling contract signatures the address of the contract is encoded into r
@@ -227,10 +227,10 @@ contract SafeRemoteKeystoreModule is Initializable {
                 // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
                 // This check is not completely accurate, since it is possible that more signatures than the threshold are send.
                 // Here we only check that the pointer is not pointing inside the part that is being processed
-                require(uint256(s) >= requiredSignatures.mul(65), "GS021");
+                require(uint256(s) >= requiredSignatures * 65, "GS021");
 
                 // Check that signature data pointer (s) is in bounds (points to the length of data -> 32 bytes)
-                require(uint256(s).add(32) <= signatures.length, "GS022");
+                require(uint256(s) + 32 <= signatures.length, "GS022");
 
                 // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
                 uint256 contractSignatureLen;
@@ -239,7 +239,7 @@ contract SafeRemoteKeystoreModule is Initializable {
                     contractSignatureLen := mload(add(add(signatures, s), 0x20))
                 }
                 require(
-                    uint256(s).add(32).add(contractSignatureLen) <=
+                    uint256(s) + 32 + contractSignatureLen <=
                         signatures.length,
                     "GS023"
                 );
@@ -268,8 +268,10 @@ contract SafeRemoteKeystoreModule is Initializable {
                     threshold,
                     innerOwners
                 );
+            } else if (v == 1){
+                // todo: add v = 1, l1sload the approveHash
             } else if (v > 30) {
-                address currentOwner = ECDSA.recover(
+                currentOwner = ECDSA.recover(
                     MessageHashUtils.toEthSignedMessageHash(dataHash),
                     v,
                     r,
@@ -281,9 +283,14 @@ contract SafeRemoteKeystoreModule is Initializable {
                     if (currentOwner == owners[j]) found = true;
 
                 if (!found) revert InvalidSignature();
-            }
+            } else {
+                currentOwner = ecrecover(dataHash, uint8(v), r, s);
+                bool found = false;
+                for (uint256 j = 0; j < owners.length; j++)
+                    if (currentOwner == owners[j]) found = true;
 
-            // todo: add v = 1
+                if (!found) revert InvalidSignature();
+            }
         }
     }
 
