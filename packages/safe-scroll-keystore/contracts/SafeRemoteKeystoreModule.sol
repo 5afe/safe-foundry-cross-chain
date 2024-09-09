@@ -18,6 +18,7 @@ contract SafeRemoteKeystoreModule is Initializable {
     //// Constants
     uint256 internal constant SAFE_OWNERS_SLOT_IDX = 2;
     uint256 internal constant SAFE_THRESHOLD_SLOT_IDX = 4;
+    uint256 internal constant SAFE_APPROVE_HASH_SLOT_IDX = 8;
     address internal constant SENTINEL_OWNERS = address(0x1);
 
     //// States
@@ -110,16 +111,11 @@ contract SafeRemoteKeystoreModule is Initializable {
         address keystore = keystores[safe];
         if (keystore == address(0)) revert NoKeystoreFound(keystore);
 
-        // Read keystore state
-        uint256 threshold = getKeystoreThreshold(keystore);
-        address[] memory owners;
-        owners = getKeystoreOwners(keystore, SENTINEL_OWNERS, owners);
-
         // Calculate the message hash
         bytes32 txHash = getTxHash(safe, to, value, data, operation);
 
         // Check signatures
-        checkSignatures(txHash, signatures, threshold, owners);
+        checkSignatures(txHash, signatures, keystore);
 
         // Execute the transaction
         if (
@@ -143,6 +139,24 @@ contract SafeRemoteKeystoreModule is Initializable {
         address keystore
     ) internal view returns (uint256) {
         return l1sload(keystore, SAFE_THRESHOLD_SLOT_IDX);
+    }
+
+    /**
+     * @dev returns approvedHash of tx on layer1
+     * @param keystore Address of a Safe Keystore
+     */
+    function getKeystoreApproveHash(
+        address keystore,
+        address approver,
+        bytes32 dataHash
+    ) internal view returns (uint256) {
+        bytes32 key = keccak256(
+            abi.encode(
+                dataHash,
+                abi.encode(approver, SAFE_APPROVE_HASH_SLOT_IDX)
+            )
+        );
+        return l1sload(keystore, uint256(key));
     }
 
     /**
@@ -202,15 +216,18 @@ contract SafeRemoteKeystoreModule is Initializable {
      * @dev Check signatures against msg hash and owners/threshold of the keystore
      * @param dataHash Hash of the data
      * @param signatures Signature data that should be verified (ECDSA signature)
-     * @param requiredSignatures Threshold
-     * @param owners List of owners
+     * @param keystore Address of the keystore
      */
     function checkSignatures(
         bytes32 dataHash,
         bytes memory signatures,
-        uint256 requiredSignatures,
-        address[] memory owners
+        address keystore
     ) internal view {
+        // Read keystore state
+        uint256 requiredSignatures = getKeystoreThreshold(keystore);
+        address[] memory owners;
+        owners = getKeystoreOwners(keystore, SENTINEL_OWNERS, owners);
+
         // Check that the provided signature data is not too short
         if (signatures.length < requiredSignatures * 65)
             revert InvalidSignatureCount();
@@ -219,7 +236,6 @@ contract SafeRemoteKeystoreModule is Initializable {
             (uint8 v, bytes32 r, bytes32 s) = signatureSplit(signatures, i);
             address currentOwner;
             if (v == 0) {
-                // require(keccak256(data) == dataHash, "GS027");
                 // If v is 0 then it is a contract signature
                 // When handling contract signatures the address of the contract is encoded into r
                 currentOwner = address(uint160(uint256(r)));
@@ -239,8 +255,7 @@ contract SafeRemoteKeystoreModule is Initializable {
                     contractSignatureLen := mload(add(add(signatures, s), 0x20))
                 }
                 require(
-                    uint256(s) + 32 + contractSignatureLen <=
-                        signatures.length,
+                    uint256(s) + 32 + contractSignatureLen <= signatures.length,
                     "GS023"
                 );
 
@@ -252,24 +267,23 @@ contract SafeRemoteKeystoreModule is Initializable {
                     contractSignature := add(add(signatures, s), 0x20)
                 }
 
-                // get owners from l1
-                address[] memory tempOwners;
-                address[] memory innerOwners = getKeystoreOwners(
-                    currentOwner,
-                    SENTINEL_OWNERS,
-                    tempOwners
+                checkSignatures(dataHash, contractSignature, currentOwner);
+            } else if (v == 1) {
+                // TODO: remove, no need to check approved hash on L1 of txs that happen on L2
+                // If v is 1 then it is an approved hash
+                // When handling approved hashes the address of the approver is encoded into r
+                currentOwner = address(uint160(uint256(r)));
+                // Hashes are automatically approved by the sender of the message or when they have been pre-approved via a separate transaction
+                require(
+                    msg.sender == currentOwner ||
+                        getKeystoreApproveHash(
+                            keystore,
+                            currentOwner,
+                            dataHash
+                        ) !=
+                        0,
+                    "GS025"
                 );
-                // Read keystore state
-                uint256 threshold = getKeystoreThreshold(currentOwner);
-                
-                checkSignatures(
-                    dataHash,
-                    contractSignature,
-                    threshold,
-                    innerOwners
-                );
-            } else if (v == 1){
-                // todo: add v = 1, l1sload the approveHash
             } else if (v > 30) {
                 currentOwner = ECDSA.recover(
                     MessageHashUtils.toEthSignedMessageHash(dataHash),
