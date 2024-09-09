@@ -268,6 +268,8 @@ contract SafeRemoteKeystoreModule is Initializable {
                     threshold,
                     innerOwners
                 );
+            } else if (v == 1){
+                // todo: add v = 1, l1sload the approveHash
             } else if (v > 30) {
                 currentOwner = ECDSA.recover(
                     MessageHashUtils.toEthSignedMessageHash(dataHash),
@@ -281,8 +283,6 @@ contract SafeRemoteKeystoreModule is Initializable {
                     if (currentOwner == owners[j]) found = true;
 
                 if (!found) revert InvalidSignature();
-            } else if ( v == 1 ){
-            // todo: add v = 1, l1sload the approveHash
             } else {
                 currentOwner = ecrecover(dataHash, uint8(v), r, s);
                 bool found = false;
