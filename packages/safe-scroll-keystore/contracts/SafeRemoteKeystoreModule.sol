@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "./interfaces/ISafe.sol";
 import "./interfaces/IL1Blocks.sol";
-import { Enum } from "@safe-global/safe-contracts/contracts/common/Enum.sol";
+import {Enum} from "@safe-global/safe-contracts/contracts/common/Enum.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -217,18 +217,73 @@ contract SafeRemoteKeystoreModule is Initializable {
 
         for (uint256 i = 0; i < requiredSignatures; i++) {
             (uint8 v, bytes32 r, bytes32 s) = signatureSplit(signatures, i);
-            address currentOwner = ECDSA.recover(
-                MessageHashUtils.toEthSignedMessageHash(dataHash),
-                v,
-                r,
-                s
-            );
 
-            bool found = false;
-            for (uint256 j = 0; j < owners.length; j++)
-                if (currentOwner == owners[j]) found = true;
+            if (v = 0) {
+                // require(keccak256(data) == dataHash, "GS027");
+                // If v is 0 then it is a contract signature
+                // When handling contract signatures the address of the contract is encoded into r
+                currentOwner = address(uint160(uint256(r)));
 
-            if (!found) revert InvalidSignature();
+                // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
+                // This check is not completely accurate, since it is possible that more signatures than the threshold are send.
+                // Here we only check that the pointer is not pointing inside the part that is being processed
+                require(uint256(s) >= requiredSignatures.mul(65), "GS021");
+
+                // Check that signature data pointer (s) is in bounds (points to the length of data -> 32 bytes)
+                require(uint256(s).add(32) <= signatures.length, "GS022");
+
+                // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
+                uint256 contractSignatureLen;
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    contractSignatureLen := mload(add(add(signatures, s), 0x20))
+                }
+                require(
+                    uint256(s).add(32).add(contractSignatureLen) <=
+                        signatures.length,
+                    "GS023"
+                );
+
+                // Check signature
+                bytes memory contractSignature;
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
+                    contractSignature := add(add(signatures, s), 0x20)
+                }
+
+                // get owners from l1
+                address[] memory tempOwners;
+                address[] memory innerOwners = getKeystoreOwners(
+                    currentOwner,
+                    SENTINEL_OWNERS,
+                    tempOwners
+                );
+                // Read keystore state
+                uint256 threshold = getKeystoreThreshold(currentOwner);
+                
+                checkSignatures(
+                    dataHash,
+                    contractSignature,
+                    threshold,
+                    innerOwners
+                );
+            } else if (v > 30) {
+                address currentOwner = ECDSA.recover(
+                    MessageHashUtils.toEthSignedMessageHash(dataHash),
+                    v,
+                    r,
+                    s
+                );
+
+                bool found = false;
+                for (uint256 j = 0; j < owners.length; j++)
+                    if (currentOwner == owners[j]) found = true;
+
+                if (!found) revert InvalidSignature();
+            }
+
+            // todo: add v = 1
         }
     }
 
