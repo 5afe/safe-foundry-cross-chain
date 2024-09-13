@@ -269,7 +269,7 @@ contract SafeRemoteKeystoreModule is Initializable {
 
                 checkSignatures(dataHash, contractSignature, currentOwner);
             } else if (v == 1) {
-                // TODO: remove, no need to check approved hash on L1 of txs that happen on L2
+                // TODO: this branch can be removed, because no one will approve L2's tx on L1
                 // If v is 1 then it is an approved hash
                 // When handling approved hashes the address of the approver is encoded into r
                 currentOwner = address(uint160(uint256(r)));
@@ -287,7 +287,7 @@ contract SafeRemoteKeystoreModule is Initializable {
             } else if (v > 30) {
                 currentOwner = ECDSA.recover(
                     MessageHashUtils.toEthSignedMessageHash(dataHash),
-                    v,
+                    v - 4,
                     r,
                     s
                 );
@@ -298,7 +298,7 @@ contract SafeRemoteKeystoreModule is Initializable {
 
                 if (!found) revert InvalidSignature();
             } else {
-                currentOwner = ecrecover(dataHash, uint8(v), r, s);
+                currentOwner = ecrecover(dataHash, v, r, s);
                 bool found = false;
                 for (uint256 j = 0; j < owners.length; j++)
                     if (currentOwner == owners[j]) found = true;
