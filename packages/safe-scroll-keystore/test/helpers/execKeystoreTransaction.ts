@@ -5,7 +5,7 @@ const CONTRACT_ADDR_PREFIX = "0x000000000000000000000000";
 const CONTRACT_SIG_V = "0x00";
 const CONTRACT_SIG_OFFSET = "0x0000000000000000000000000000000000000000000000000000000000000082";
 
-export async function execKeystoreTransaction(
+export default async function execKeystoreTransaction(
   module: SafeRemoteKeystoreModule,
   {
     safeL2,
