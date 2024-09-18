@@ -2,9 +2,9 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { expect } from 'chai'
 import { JsonRpcProvider, parseEther } from 'ethers'
 
-import execKeystoreTransaction from './helpers/execKeystoreTransaction'
+import { execKeystoreTransaction, execKeystoreTransactionNested} from './helpers/execKeystoreTransaction'
 import execTransaction from './helpers/execSafeTransaction'
-import setup from './helpers/setup'
+import setup, { nestedSetup } from './helpers/setup'
 import { HardhatEthersProvider } from '@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider'
 import { TestToken } from '../typechain-types'
 import { ethers } from 'hardhat'
@@ -121,6 +121,37 @@ describe('SafeRemoteKeystoreModule', () => {
 
         // Check recipient should have received 10 TT
         expect(await getERC20Balance(token, RECIPIENT_ADDR)).to.equal(amount)
+
+        // Check the nonce has been incremented
+        expect(await safeRemoteKeystoreModule.nonces(safeL2Address)).to.equal(1)
+    })
+
+    it('Executes ETH transfer via SafeRemoteKeystore module with Nested Contract Signature', async () => {
+        const { provider, safeL1, safeNestedL1, safeL2, safeRemoteKeystoreModule, owner1L1, owner2L1, ownerL2 } = await loadFixture(nestedSetup)
+
+        const safeL2Address = await safeL2.getAddress()
+        const safeRemoteKeystoreModuleAddress = await safeRemoteKeystoreModule.getAddress()
+
+        // Enable KeyStoreModule as module on SafeL2
+        await execTransaction(safeL2, await safeL2.enableModule.populateTransaction(safeRemoteKeystoreModuleAddress), ownerL2)
+
+        // Register SafeL1 as Keystore for SafeL2
+        await execTransaction(safeL2, await safeRemoteKeystoreModule.registerKeystore.populateTransaction(safeL1), ownerL2)
+
+        // Execute a transaction through safeRemtoteKeystoreModule
+        const amount = parseEther("0.1")
+        await execKeystoreTransactionNested(safeRemoteKeystoreModule, {
+            safeL2: safeL2Address,
+            safeNestedL1: safeNestedL1,
+            to: RECIPIENT_ADDR,
+            value: amount,
+            data: "0x",
+            operation: 0, // CALL
+            signersL1: [owner1L1, owner2L1]
+        })
+
+        // Check recipient should have received 0.1 ETH
+        expect(await getETHBalance(provider, RECIPIENT_ADDR)).to.equal(amount)
 
         // Check the nonce has been incremented
         expect(await safeRemoteKeystoreModule.nonces(safeL2Address)).to.equal(1)
