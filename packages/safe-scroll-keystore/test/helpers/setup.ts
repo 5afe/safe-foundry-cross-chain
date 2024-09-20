@@ -93,7 +93,10 @@ export default async function setup() {
   }
 }
 
-
+/// We are going to set a nested multisig account structure on L1:
+/// The multisig account `SAFE_L1` has 2 owners : `owner1L1`(which is a EOA) and `safeNestedL1`(which is another multisig account)
+/// The multisig account `SafeNestedL1` has 2 owners: `owner1L1` and `owner2L1`(which are both EOAs)
+/// Both of the 2 multisig accounts(`SAFE_L1` & `SafeNestedL1`) have a threshold of 2
 export async function nestedSetup() {
   const [owner1L1, owner2L1, ownerL2, deployer, relayer] = await hre.ethers.getSigners()
   const thresholdL1 = "0x02" // 2
