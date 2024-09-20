@@ -127,7 +127,7 @@ describe('SafeRemoteKeystoreModule', () => {
     })
 
     it('Executes ETH transfer via SafeRemoteKeystore module with Nested Contract Signature', async () => {
-        const { provider, safeL1, safeNestedL1, safeL2, safeRemoteKeystoreModule, owner1L1, owner2L1, ownerL2 } = await loadFixture(nestedSetup)
+        const { provider, safeNestedL1, safeL1, safeL2, safeRemoteKeystoreModule, owner1L1, owner2L1, ownerL2 } = await loadFixture(nestedSetup)
 
         const safeL2Address = await safeL2.getAddress()
         const safeRemoteKeystoreModuleAddress = await safeRemoteKeystoreModule.getAddress()
@@ -142,7 +142,7 @@ describe('SafeRemoteKeystoreModule', () => {
         const amount = parseEther("0.1")
         await execKeystoreTransactionNested(safeRemoteKeystoreModule, {
             safeL2: safeL2Address,
-            safeNestedL1: safeNestedL1,
+            safeL1: safeL1,
             to: RECIPIENT_ADDR,
             value: amount,
             data: "0x",

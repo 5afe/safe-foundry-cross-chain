@@ -17,7 +17,7 @@ import { AbiCoder, getBytes, hexlify, keccak256, parseEther, toUtf8Bytes, zeroPa
 
 
 const SAFE_L1 = "0x0000000000000000000000000000000000005aFE"
-const SAFE_NESTED_L1 = "0x0000000000000000000000000000000000006bEF"
+const NESTED_SAFE_L1 = "0x0000000000000000000000000000000000006bEF"
 export default async function setup() {
   const [owner1L1, owner2L1, ownerL2, deployer, relayer] = await hre.ethers.getSigners()
   const thresholdL1 = "0x02" // 2
@@ -94,9 +94,9 @@ export default async function setup() {
 }
 
 /// We are going to set a nested multisig account structure on L1:
-/// The multisig account `SAFE_L1` has 2 owners : `owner1L1`(which is a EOA) and `safeNestedL1`(which is another multisig account)
-/// The multisig account `SafeNestedL1` has 2 owners: `owner1L1` and `owner2L1`(which are both EOAs)
-/// Both of the 2 multisig accounts(`SAFE_L1` & `SafeNestedL1`) have a threshold of 2
+/// The multisig account `NestedSafeL1` has 2 owners : `owner1L1`(which is a EOA) and `safeL1`(which is another multisig account)
+/// The multisig account `SafeL1` has 2 owners: `owner1L1` and `owner2L1`(which are both EOAs)
+/// Both of the 2 multisig accounts(`NestedSafeL1` & `SafeL1`) have a threshold of 2
 export async function nestedSetup() {
   const [owner1L1, owner2L1, ownerL2, deployer, relayer] = await hre.ethers.getSigners()
   const thresholdL1 = "0x02" // 2
@@ -115,6 +115,20 @@ export async function nestedSetup() {
   // Configure Mocks
   const abiencoder = AbiCoder.defaultAbiCoder()
   const SENTINEL_ADDR = "0x0000000000000000000000000000000000000001"
+  await l1sload.set(NESTED_SAFE_L1, zeroPadValue("0x04", 32), zeroPadValue(thresholdL1, 32));
+  await l1sload.set(
+    NESTED_SAFE_L1,
+    keccak256(abiencoder.encode(["address", "uint256"], [SENTINEL_ADDR, zeroPadValue("0x02", 32)])),
+    zeroPadValue(owner1L1.address, 32));
+  await l1sload.set(
+    NESTED_SAFE_L1,
+    keccak256(abiencoder.encode(["address", "uint256"], [owner1L1.address, zeroPadValue("0x02", 32)])),
+    zeroPadValue(SAFE_L1, 32));
+  await l1sload.set(
+    NESTED_SAFE_L1,
+    keccak256(abiencoder.encode(["address", "uint256"], [SAFE_L1, zeroPadValue("0x02", 32)])),
+    zeroPadValue(SENTINEL_ADDR, 32));
+  // set the nested L1
   await l1sload.set(SAFE_L1, zeroPadValue("0x04", 32), zeroPadValue(thresholdL1, 32));
   await l1sload.set(
     SAFE_L1,
@@ -123,23 +137,9 @@ export async function nestedSetup() {
   await l1sload.set(
     SAFE_L1,
     keccak256(abiencoder.encode(["address", "uint256"], [owner1L1.address, zeroPadValue("0x02", 32)])),
-    zeroPadValue(SAFE_NESTED_L1, 32));
-  await l1sload.set(
-    SAFE_L1,
-    keccak256(abiencoder.encode(["address", "uint256"], [SAFE_NESTED_L1, zeroPadValue("0x02", 32)])),
-    zeroPadValue(SENTINEL_ADDR, 32));
-  // set the nested L1
-  await l1sload.set(SAFE_NESTED_L1, zeroPadValue("0x04", 32), zeroPadValue(thresholdL1, 32));
-  await l1sload.set(
-    SAFE_NESTED_L1,
-    keccak256(abiencoder.encode(["address", "uint256"], [SENTINEL_ADDR, zeroPadValue("0x02", 32)])),
-    zeroPadValue(owner1L1.address, 32));
-  await l1sload.set(
-    SAFE_NESTED_L1,
-    keccak256(abiencoder.encode(["address", "uint256"], [owner1L1.address, zeroPadValue("0x02", 32)])),
     zeroPadValue(owner2L1.address, 32));
   await l1sload.set(
-    SAFE_NESTED_L1,
+    SAFE_L1,
     keccak256(abiencoder.encode(["address", "uint256"], [owner2L1.address, zeroPadValue("0x02", 32)])),
     zeroPadValue(SENTINEL_ADDR, 32));
   
@@ -172,8 +172,9 @@ export async function nestedSetup() {
     //provider
     provider: owner1L1.provider,
     // safes
+    safeNestedL1: NESTED_SAFE_L1,
     safeL1: SAFE_L1,
-    safeNestedL1: SAFE_NESTED_L1,
+
     safeL2,
     // singletons
     safeRemoteKeystoreModule,

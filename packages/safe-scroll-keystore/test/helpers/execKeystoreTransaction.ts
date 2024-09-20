@@ -43,7 +43,7 @@ export async function execKeystoreTransactionNested(
   module: SafeRemoteKeystoreModule,
   {
     safeL2,
-    safeNestedL1,
+    safeL1,
     to,
     value,
     data,
@@ -62,7 +62,7 @@ export async function execKeystoreTransactionNested(
   signatures.push(updateEIP191Sig(signature_owner1));
 
   // Then, we will construct the contract sig for safeNestedL1
-  signatures.push(CONTRACT_ADDR_PREFIX, safeNestedL1);
+  signatures.push(CONTRACT_ADDR_PREFIX, safeL1);
   signatures.push(CONTRACT_SIG_OFFSET, CONTRACT_SIG_V);
   
   // Set the offset for the following 2 signature
