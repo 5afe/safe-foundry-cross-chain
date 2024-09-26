@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "./interfaces/ISafe.sol";
 import "./interfaces/IL1Blocks.sol";
-import { Enum } from "@safe-global/safe-contracts/contracts/common/Enum.sol";
+import {Enum} from "@safe-global/safe-contracts/contracts/common/Enum.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -18,6 +18,7 @@ contract SafeRemoteKeystoreModule is Initializable {
     //// Constants
     uint256 internal constant SAFE_OWNERS_SLOT_IDX = 2;
     uint256 internal constant SAFE_THRESHOLD_SLOT_IDX = 4;
+    uint256 internal constant SAFE_APPROVE_HASH_SLOT_IDX = 8;
     address internal constant SENTINEL_OWNERS = address(0x1);
 
     //// States
@@ -110,16 +111,11 @@ contract SafeRemoteKeystoreModule is Initializable {
         address keystore = keystores[safe];
         if (keystore == address(0)) revert NoKeystoreFound(keystore);
 
-        // Read keystore state
-        uint256 threshold = getKeystoreThreshold(keystore);
-        address[] memory owners;
-        owners = getKeystoreOwners(keystore, SENTINEL_OWNERS, owners);
-
         // Calculate the message hash
         bytes32 txHash = getTxHash(safe, to, value, data, operation);
 
         // Check signatures
-        checkSignatures(txHash, signatures, threshold, owners);
+        checkSignatures(txHash, signatures, keystore);
 
         // Execute the transaction
         if (
@@ -143,6 +139,24 @@ contract SafeRemoteKeystoreModule is Initializable {
         address keystore
     ) internal view returns (uint256) {
         return l1sload(keystore, SAFE_THRESHOLD_SLOT_IDX);
+    }
+
+    /**
+     * @dev returns approvedHash of tx on layer1
+     * @param keystore Address of a Safe Keystore
+     */
+    function getKeystoreApproveHash(
+        address keystore,
+        address approver,
+        bytes32 dataHash
+    ) internal view returns (uint256) {
+        bytes32 key = keccak256(
+            abi.encode(
+                dataHash,
+                abi.encode(approver, SAFE_APPROVE_HASH_SLOT_IDX)
+            )
+        );
+        return l1sload(keystore, uint256(key));
     }
 
     /**
@@ -202,33 +216,95 @@ contract SafeRemoteKeystoreModule is Initializable {
      * @dev Check signatures against msg hash and owners/threshold of the keystore
      * @param dataHash Hash of the data
      * @param signatures Signature data that should be verified (ECDSA signature)
-     * @param requiredSignatures Threshold
-     * @param owners List of owners
+     * @param keystore Address of the keystore
      */
     function checkSignatures(
         bytes32 dataHash,
         bytes memory signatures,
-        uint256 requiredSignatures,
-        address[] memory owners
-    ) internal pure {
+        address keystore
+    ) internal view {
+        // Read keystore state
+        uint256 requiredSignatures = getKeystoreThreshold(keystore);
+        address[] memory owners;
+        owners = getKeystoreOwners(keystore, SENTINEL_OWNERS, owners);
+
         // Check that the provided signature data is not too short
         if (signatures.length < requiredSignatures * 65)
             revert InvalidSignatureCount();
 
         for (uint256 i = 0; i < requiredSignatures; i++) {
             (uint8 v, bytes32 r, bytes32 s) = signatureSplit(signatures, i);
-            address currentOwner = ECDSA.recover(
-                MessageHashUtils.toEthSignedMessageHash(dataHash),
-                v,
-                r,
-                s
-            );
+            address currentOwner;
+            if (v == 0) {
+                // If v is 0 then it is a contract signature
+                // When handling contract signatures the address of the contract is encoded into r
+                currentOwner = address(uint160(uint256(r)));
 
-            bool found = false;
-            for (uint256 j = 0; j < owners.length; j++)
-                if (currentOwner == owners[j]) found = true;
+                // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
+                // This check is not completely accurate, since it is possible that more signatures than the threshold are send.
+                // Here we only check that the pointer is not pointing inside the part that is being processed
+                require(uint256(s) >= requiredSignatures * 65, "GS021");
 
-            if (!found) revert InvalidSignature();
+                // Check that signature data pointer (s) is in bounds (points to the length of data -> 32 bytes)
+                require(uint256(s) + 32 <= signatures.length, "GS022");
+
+                // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
+                uint256 contractSignatureLen;
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    contractSignatureLen := mload(add(add(signatures, s), 0x20))
+                }
+                require(
+                    uint256(s) + 32 + contractSignatureLen <= signatures.length,
+                    "GS023"
+                );
+
+                // Check signature
+                bytes memory contractSignature;
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
+                    contractSignature := add(add(signatures, s), 0x20)
+                }
+
+                checkSignatures(dataHash, contractSignature, currentOwner);
+            } else if (v == 1) {
+                // TODO: this branch can be removed, because no one will approve L2's tx on L1
+                // If v is 1 then it is an approved hash
+                // When handling approved hashes the address of the approver is encoded into r
+                currentOwner = address(uint160(uint256(r)));
+                // Hashes are automatically approved by the sender of the message or when they have been pre-approved via a separate transaction
+                require(
+                    msg.sender == currentOwner ||
+                        getKeystoreApproveHash(
+                            keystore,
+                            currentOwner,
+                            dataHash
+                        ) !=
+                        0,
+                    "GS025"
+                );
+            } else if (v > 30) {
+                currentOwner = ECDSA.recover(
+                    MessageHashUtils.toEthSignedMessageHash(dataHash),
+                    v - 4,
+                    r,
+                    s
+                );
+
+                bool found = false;
+                for (uint256 j = 0; j < owners.length; j++)
+                    if (currentOwner == owners[j]) found = true;
+
+                if (!found) revert InvalidSignature();
+            } else {
+                currentOwner = ecrecover(dataHash, v, r, s);
+                bool found = false;
+                for (uint256 j = 0; j < owners.length; j++)
+                    if (currentOwner == owners[j]) found = true;
+
+                if (!found) revert InvalidSignature();
+            }
         }
     }
 
